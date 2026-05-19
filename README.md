@@ -36,10 +36,8 @@ Built with **FastAPI** · **SQLAlchemy** · **MySQL** · **Vanilla HTML/CSS/JS**
 ```
 SportEventsWeb/
 ├── main.py                  # FastAPI app entry point
-├── start.bat                # One-click Windows launcher
-├── setup_db.sql             # MySQL database creation script
-├── migrate_roles.sql        # Role migration (run after initial setup)
-├── migrate_joueur_fields.sql# Athlete fields migration
+├── start.bat                # One-click Windows setup & launcher
+├── database_setup.sql       # Complete MySQL schema (run once)
 │
 ├── backend/
 │   ├── .env.example         # ← copy to .env and fill in your values
@@ -107,15 +105,10 @@ cd SportEventsWeb
 
 ### 2 — Create the MySQL database
 
-```bash
-mysql -u root -p < setup_db.sql
-```
-
-Then run the migration scripts **in order**:
+Run the **single** setup file — it creates the database and all tables in one step:
 
 ```bash
-mysql -u root -p sport_events < migrate_roles.sql
-mysql -u root -p sport_events < migrate_joueur_fields.sql
+mysql -u root -p < database_setup.sql
 ```
 
 ### 3 — Configure environment variables
