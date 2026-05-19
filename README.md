@@ -99,7 +99,7 @@ SportEventsWeb/
 ### 1 — Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/SportEventsWeb.git
+git clone https://github.com/Avenger1705/SportEventsWeb.git
 cd SportEventsWeb
 ```
 
