@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil Joueur – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .profile-hero{display:flex;gap:32px;align-items:center;background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-xl);padding:36px;margin-bottom:28px}
+    .profile-avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--blue);box-shadow:0 0 30px var(--blue-glow);flex-shrink:0}
+    .profile-info h2{font-size:28px;font-weight:900;margin-bottom:4px}
+    .profile-info .sport-tag{display:inline-block;padding:4px 14px;background:var(--blue-subtle);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3);border-radius:100px;font-size:12px;font-weight:700;margin-bottom:12px}
+    .profile-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+    .p-stat{text-align:center;padding:12px;background:var(--bg-3);border-radius:12px;border:1px solid var(--border)}
+    .p-stat .val{font-size:22px;font-weight:900;color:var(--blue-hover)}
+    .p-stat .lbl{font-size:11px;color:var(--text-3);margin-top:2px}
+    .body-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+    .body-stat{background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:20px;text-align:center}
+    .body-stat .icon{font-size:28px;margin-bottom:6px}
+    .body-stat .val{font-size:24px;font-weight:800;color:var(--text)}
+    .body-stat .lbl{font-size:12px;color:var(--text-2);margin-top:2px}
+    .section{background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-xl);padding:28px;margin-bottom:20px}
+    .section h3{font-size:18px;font-weight:800;margin-bottom:16px}
+    .history-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg-3);border-radius:10px;margin-bottom:8px;font-size:13px}
+    .history-teams{font-weight:700;color:var(--text)}
+    .history-score{font-size:16px;font-weight:800;color:var(--blue-hover)}
+    .history-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px}
+    .win{background:rgba(46,160,67,.1);color:#56D364}
+    .loss{background:rgba(239,68,68,.1);color:#f87171}
+    .team-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--bg-3);border:1px solid var(--border);border-radius:10px;font-size:13px;font-weight:600;margin-right:8px;margin-bottom:8px}
+    /* ── Match Comments ── */
+    .history-row-container { margin-bottom: 8px; background: var(--bg-3); border-radius: 10px; overflow: hidden; }
+    .history-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; font-size: 13px; background: transparent; margin-bottom: 0; border-radius: 0; }
+    .match-comments-panel { border-top: 1px solid rgba(255,255,255,.06); background: rgba(0,0,0,.18); overflow: hidden; max-height: 0; transition: max-height .35s ease; }
+    .match-comments-panel.open { max-height: 600px; }
+    .comments-inner { padding: 12px 16px; }
+    .comment-item { display: flex; gap: 9px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); animation: fadeIn .2s ease; }
+    .comment-item:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+    .comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .comment-username { font-size: 11px; font-weight: 700; color: var(--blue-hover); }
+    .comment-time    { font-size: 10px; color: var(--text-3); }
+    .comment-text    { font-size: 12px; color: var(--text-2); line-height: 1.5; word-break: break-word; }
+    .btn-del-comment { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; padding: 0 2px; transition: color .15s; flex-shrink: 0; }
+    .btn-del-comment:hover { color: #f87171; }
+    .comment-form { display: flex; gap: 7px; margin-top: 10px; }
+    .comment-input { flex: 1; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 12px; padding: 7px 10px; resize: none; outline: none; transition: border-color .2s; min-height: 34px; max-height: 90px; }
+    .comment-input:focus { border-color: var(--blue); }
+    .btn-comment-send { background: var(--blue); color: #fff; border: none; border-radius: 8px; padding: 7px 13px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
+    .btn-comment-send:hover { box-shadow: 0 4px 14px var(--blue-glow); transform: translateY(-1px); }
+    .btn-comment-toggle { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; font-weight: 700; padding: 4px; border-radius: 6px; display: flex; align-items: center; gap: 4px; transition: all .2s; margin-left: 8px; }
+    .btn-comment-toggle:hover { color: var(--blue-hover); background: rgba(255,255,255,0.05); }
+    .comment-count-badge { background: var(--blue-subtle); color: var(--blue-hover); border-radius: 100px; padding: 1px 6px; font-size: 10px; font-weight: 800; }
+    @media(max-width:768px){
+      .profile-hero{flex-direction:column;text-align:center}
+      .profile-stats{grid-template-columns:repeat(2,1fr)}
+      .body-stats{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <button class="btn btn-ghost btn-sm" onclick="history.back()">← Retour</button>
+    </div>
+  </nav>
+  <main class="dashboard-layout" id="content">
+    <div style="text-align:center;padding:60px;color:var(--text-2)">Chargement du profil...</div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const playerId = params.get("id");
+    if (!playerId) { document.getElementById("content").innerHTML = '<div style="text-align:center;padding:60px;color:var(--red)">ID joueur manquant</div>'; }
+
+    async function loadProfile() {
+      try {
+        const p = await API.getPlayer(playerId);
+        const fullName = `${p.prenom || ""} ${p.nom || ""}`.trim() || p.username;
+        const winRate = p.matches_played > 0 ? Math.round((p.matches_won / p.matches_played) * 100) : 0;
+
+        document.title = `${fullName} – Sport Events`;
+        const content = document.getElementById("content");
+        content.innerHTML = `
+          <div class="profile-hero">
+            <img class="profile-avatar" src="${getProfileImageUrl(p.profile_image)}" alt="${fullName}">
+            <div class="profile-info">
+              <h2>${fullName}</h2>
+              <div style="color:var(--text-2);font-size:14px;margin-bottom:6px">@${p.username}</div>
+              ${p.practice_sport ? `<span class="sport-tag">${sportEmoji(p.practice_sport)} ${p.practice_sport}</span>` : ""}
+              ${p.ranking ? `<span class="sport-tag" style="margin-left:6px">🏅 ${p.ranking}</span>` : ""}
+              <div class="profile-stats">
+                <div class="p-stat"><div class="val">${p.matches_played || 0}</div><div class="lbl">Matchs joués</div></div>
+                <div class="p-stat"><div class="val" style="color:#56D364">${p.matches_won || 0}</div><div class="lbl">Victoires</div></div>
+                <div class="p-stat"><div class="val" style="color:#f87171">${p.matches_lost || 0}</div><div class="lbl">Défaites</div></div>
+                <div class="p-stat"><div class="val">${winRate}%</div><div class="lbl">Taux victoire</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="body-stats">
+            <div class="body-stat"><div class="icon">🎂</div><div class="val">${p.age || "—"}</div><div class="lbl">Âge</div></div>
+            <div class="body-stat"><div class="icon">📏</div><div class="val">${p.height ? p.height + " cm" : "—"}</div><div class="lbl">Taille</div></div>
+            <div class="body-stat"><div class="icon">⚖️</div><div class="val">${p.weight ? p.weight + " kg" : "—"}</div><div class="lbl">Poids</div></div>
+          </div>
+
+          ${p.teams && p.teams.length ? `
+          <div class="section">
+            <h3>🏟️ Équipes</h3>
+            <div>${p.teams.map(t => `<span class="team-badge">${sportEmoji(t.sport)} ${t.name} ${t.position ? `<span style="color:var(--text-3);font-size:11px">(${t.position})</span>` : ""}</span>`).join("")}</div>
+          </div>` : ""}
+
+          <div class="section">
+            <h3>📜 Historique des matchs</h3>
+            <div id="matchHistory">
+              ${p.match_history && p.match_history.length ? p.match_history.map(m => {
+                const tA = m.team_a ? m.team_a.name : "TBD";
+                const tB = m.team_b ? m.team_b.name : "TBD";
+                const isWin = m.winner && p.teams && p.teams.some(t => t.id === m.winner.id);
+                return `<div class="history-row-container">
+                  <div class="history-row">
+                    <div class="history-teams">${tA} vs ${tB}</div>
+                    <div class="history-score">${m.score_a !== null ? m.score_a : "—"} - ${m.score_b !== null ? m.score_b : "—"}</div>
+                    <span class="history-status ${m.status === "termine" ? (isWin ? "win" : "loss") : ""}">${m.status === "termine" ? (isWin ? "Victoire" : "Défaite") : m.status === "en_cours" ? "En cours" : "À venir"}</span>
+                    ${m.match_date ? `<span style="font-size:11px;color:var(--text-3);margin-left:auto;">${formatDateFr(m.match_date)}</span>` : ""}
+                    <button class="btn-comment-toggle" id="cmtToggle_${m.id}" onclick="toggleComments(${m.id}, this)">
+                      💬 <span class="comment-count-badge" id="cmtCount_${m.id}">…</span>
+                    </button>
+                  </div>
+                  <div class="match-comments-panel" id="cmtPanel_${m.id}">
+                    <div class="comments-inner">
+                      <div id="cmtList_${m.id}" style="max-height:260px;overflow-y:auto;">
+                        <p style="color:var(--text-3);font-size:12px;text-align:center;padding:8px 0;">Chargement…</p>
+                      </div>
+                      <form class="comment-form" onsubmit="submitMatchComment(event, ${m.id})">
+                        <textarea id="cmtInput_${m.id}" class="comment-input" placeholder="Écrire un commentaire…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitMatchComment(event,${m.id});}"></textarea>
+                        <button type="submit" class="btn-comment-send">Envoyer</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>`;
+              }).join("") : '<div style="text-align:center;padding:20px;color:var(--text-3)">Aucun match joué</div>'}
+            </div>
+          </div>`;
+
+        // Load comment counts after rendering
+        p.match_history.forEach(m => {
+          API.getMatchComments(m.id).then(list => {
+            const badge = document.getElementById(`cmtCount_${m.id}`);
+            if (badge) badge.textContent = list.length;
+          }).catch(() => {});
+        });
+      } catch(err) {
+        document.getElementById("content").innerHTML = `<div style="text-align:center;padding:60px;color:var(--red)">${err.message}</div>`;
+      }
+    }
+
+    async function toggleComments(matchId, btn) {
+      const panel = document.getElementById(`cmtPanel_${matchId}`);
+      if (!panel) return;
+      const isOpen = panel.classList.toggle("open");
+      if (isOpen) await loadMatchComments(matchId);
+    }
+
+    async function loadMatchComments(matchId) {
+      const list = document.getElementById(`cmtList_${matchId}`);
+      if (!list) return;
+      try {
+        const comments = await API.getMatchComments(matchId);
+        const badge = document.getElementById(`cmtCount_${matchId}`);
+        if (badge) badge.textContent = comments.length;
+
+        if (!comments.length) {
+          list.innerHTML = '<p style="color:var(--text-3);font-size:12px;text-align:center;padding:8px 0;">Aucun commentaire. Soyez le premier !</p>';
+          return;
+        }
+        const myId = Auth.getUserId();
+        const role = Auth.getRole();
+        const isAdmin = role === "admin";
+        list.innerHTML = comments.map(c => `
+          <div class="comment-item" id="cmtItem_${c.id}">
+            <img class="comment-avatar" src="${getProfileImageUrl(c.user.profile_image)}" alt="">
+            <div class="comment-body">
+              <div class="comment-meta">
+                <span class="comment-username">${c.user.username}</span>
+                <span class="comment-time">${fmtCommentDate(c.created_at)}</span>
+              </div>
+              <div class="comment-text">${escHtml(c.content)}</div>
+            </div>
+            ${(c.user.id === myId || isAdmin) ? `<button class="btn-del-comment" title="Supprimer" onclick="deleteMatchComment(${c.id}, ${matchId})">🗑</button>` : ""}
+          </div>
+        `).join("");
+      } catch(e) { list.innerHTML = `<p style="color:var(--red);font-size:12px;">${e.message}</p>`; }
+    }
+
+    async function submitMatchComment(event, matchId) {
+      if (event && event.preventDefault) event.preventDefault();
+      const input = document.getElementById(`cmtInput_${matchId}`);
+      if (!input) return;
+      const content = input.value.trim();
+      if (!content) return;
+      try {
+        await API.addMatchComment(matchId, content);
+        input.value = "";
+        await loadMatchComments(matchId);
+      } catch(e) { alert(e.message); }
+    }
+
+    async function deleteMatchComment(commentId, matchId) {
+      if (!confirm("Supprimer ce commentaire ?")) return;
+      try {
+        await API.deleteMatchComment(commentId);
+        await loadMatchComments(matchId);
+      } catch(e) { alert(e.message); }
+    }
+
+    function fmtCommentDate(dt) {
+      if (!dt) return "";
+      return new Date(dt).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    if (playerId) loadProfile();
+  </script>
+</body>
+</html>

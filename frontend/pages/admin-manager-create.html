@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Créer un Compte Admin</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js?v=1.0.1"></script>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <span class="icon">🛡️</span>
+        <h1>Admin Control</h1>
+        <p>Générez un compte Administrateur pré-vérifié</p>
+      </div>
+
+      <div id="alertZone"></div>
+
+      <form class="auth-form" id="adminForm">
+        <div class="form-group">
+          <label for="adminCode">Code Secret Administrateur</label>
+          <input type="password" id="adminCode" placeholder="Code d'accès requis" required>
+        </div>
+
+        <div class="divider">Informations Admin</div>
+
+        <div class="form-group">
+          <label for="regUsername">Nom complet / Structure</label>
+          <input type="text" id="regUsername" placeholder="Ex: Admin Sport Events" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail">Email professionnel</label>
+          <input type="email" id="regEmail" placeholder="admin@sport-events.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword">Mot de passe provisoire</label>
+          <input type="password" id="regPassword" placeholder="Minimum 6 caractères" required minlength="6">
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-16" id="btnCreate">
+          Créer le compte Admin
+        </button>
+      </form>
+
+      <div class="link-row" style="display: flex; justify-content: space-between; margin-top: 24px;">
+        <a href="dashboard.html" style="color: var(--text-2);">← Dashboard</a>
+        <a href="#" onclick="Auth.logout(); return false;" style="color: var(--red);">Déconnexion</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("adminForm");
+    const btnCreate = document.getElementById("btnCreate");
+    const alertZone = document.getElementById("alertZone");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alertZone.innerHTML = "";
+      
+      const adminCode = document.getElementById("adminCode").value;
+      const username  = document.getElementById("regUsername").value.trim();
+      const email     = document.getElementById("regEmail").value.trim();
+      const password  = document.getElementById("regPassword").value;
+
+      setButtonLoading(btnCreate, true, "Création...");
+
+      try {
+        const data = await API.registerManager(username, email, password, adminCode);
+        alertZone.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+        form.reset();
+      } catch (err) {
+        alertZone.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      } finally {
+        setButtonLoading(btnCreate, false, "Créer le compte");
+      }
+    });
+  </script>
+</body>
+</html>

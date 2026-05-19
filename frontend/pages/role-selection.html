@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Choisir un rôle – Sport Events</title>
+  <meta name="description" content="Choisissez votre rôle dans la communauté Sport Events.">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper">
+    <div class="auth-card" style="max-width:500px;">
+      <div class="auth-logo">
+        <span class="icon">🎯</span>
+        <h1>Votre Profil</h1>
+        <p>Sélectionnez votre mode de participation</p>
+      </div>
+
+      <div id="alertZone"></div>
+
+      <!-- Role grid -->
+      <div class="role-grid" id="roleGrid">
+        <div class="role-card" data-role="joueur" id="card-joueur">
+          <span class="role-icon">⚽</span>
+          <div class="role-name">Joueur</div>
+          <p class="role-desc">Je participe aux compétitions et tournois</p>
+        </div>
+        <div class="role-card" data-role="visitor" id="card-visitor">
+          <span class="role-icon">👁️</span>
+          <div class="role-name">Visiteur</div>
+          <p class="role-desc">Je souhaite découvrir et suivre les événements</p>
+        </div>
+      </div>
+
+      <button id="btnContinue" class="btn btn-primary" disabled>
+        Confirmer ma sélection →
+      </button>
+
+      <div class="link-row">
+        Besoin d'aide ? <a href="#">Contactez le support</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Auth.requireAuth();
+
+    let selectedRole = null;
+    const btnContinue = document.getElementById("btnContinue");
+    const alertZone   = document.getElementById("alertZone");
+
+    document.querySelectorAll(".role-card").forEach(card => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll(".role-card").forEach(c => c.classList.remove("selected"));
+        card.classList.add("selected");
+        selectedRole = card.dataset.role;
+        btnContinue.disabled = false;
+      });
+    });
+
+    btnContinue.addEventListener("click", async () => {
+      if (!selectedRole) return;
+      setButtonLoading(btnContinue, true, "Continuer →");
+
+      try {
+        await API.setRole(selectedRole);
+        // Update local storage
+        localStorage.setItem("se_role", selectedRole);
+
+        switch (selectedRole) {
+          case "joueur":  window.location.href = "athlete-preferences.html"; break;
+          case "visitor": window.location.href = "visitor-preferences.html"; break;
+          case "admin":   window.location.href = "dashboard.html";           break;
+        }
+      } catch (err) {
+        alertZone.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+        setButtonLoading(btnContinue, false, "Continuer →");
+      }
+    });
+  </script>
+</body>
+</html>

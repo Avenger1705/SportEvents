@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription – Sport Events</title>
+  <meta name="description" content="Créez votre compte Sport Events et rejoignez la communauté sportive.">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js?v=3"></script>
+  <style>
+    .step {
+      display: none;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .role-pick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 28px 0 8px;
+    }
+
+    .role-pick-card {
+      position: relative;
+      background: var(--bg-3);
+      border: 2px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 32px 20px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+      overflow: hidden;
+    }
+
+    .role-pick-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, var(--blue-glow), transparent 70%);
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    .role-pick-card:hover {
+      background: var(--glass-hover);
+      border-color: rgba(31, 107, 255, 0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .role-pick-card:hover::before {
+      opacity: 0.5;
+    }
+
+    .role-pick-card.selected {
+      background: var(--blue-subtle);
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-glow), 0 12px 30px rgba(31, 107, 255, 0.2);
+    }
+
+    .role-pick-card.selected::before {
+      opacity: 1;
+    }
+
+    .role-pick-card .rp-icon {
+      font-size: 44px;
+      display: block;
+      margin-bottom: 14px;
+      position: relative;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+      transition: transform .3s;
+    }
+
+    .role-pick-card:hover .rp-icon,
+    .role-pick-card.selected .rp-icon {
+      transform: scale(1.15);
+    }
+
+    .role-pick-card .rp-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      position: relative;
+      margin-bottom: 6px;
+    }
+
+    .role-pick-card .rp-desc {
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.5;
+      position: relative;
+    }
+
+    .role-pick-card .rp-check {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--bg-3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .25s;
+      font-size: 12px;
+      color: transparent;
+    }
+
+    .role-pick-card.selected .rp-check {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: white;
+      box-shadow: 0 0 12px var(--blue-glow);
+    }
+
+    /* ── Password Eye Toggle ─────────────────────────── */
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      padding-right: 48px;
+    }
+
+    .eye-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-3);
+      font-size: 18px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .2s;
+      z-index: 2;
+    }
+
+    .eye-toggle:hover {
+      color: var(--blue-hover);
+    }
+
+    .eye-toggle svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    /* ── Step Indicator ────────────────────────────────── */
+    .step-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: all .3s;
+    }
+
+    .step-dot.active {
+      background: var(--blue);
+      box-shadow: 0 0 10px var(--blue-glow);
+      width: 28px;
+      border-radius: 100px;
+    }
+
+    .step-dot.done {
+      background: var(--green);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+    }
+
+    .step-line {
+      width: 24px;
+      height: 2px;
+      background: var(--border);
+      border-radius: 2px;
+      transition: background .3s;
+    }
+
+    .step-line.done {
+      background: var(--green);
+    }
+
+    /* ── Transitions ──────────────────────────────────── */
+    @keyframes slideLeft {
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .step.slide-in {
+      animation: slideLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper">
+    <div class="auth-card" style="max-width: 480px;">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <span class="icon">🏆</span>
+        <h1>Créer un Compte</h1>
+        <p>Rejoignez la plus grande communauté sportive</p>
+      </div>
+
+      <!-- Step Indicator -->
+      <div class="step-indicator" id="stepIndicator">
+        <div class="step-dot active" id="dot1"></div>
+        <div class="step-line" id="line1"></div>
+        <div class="step-dot" id="dot2"></div>
+      </div>
+
+      <!-- Alert zone -->
+      <div id="alertZone"></div>
+
+      <!-- ═══════ STEP 1: Choose Role ═══════ -->
+      <div class="step active" id="step1">
+        <h2 style="font-size:18px; font-weight:700; text-align:center; margin-bottom:4px; color:var(--text);">
+          Quel est votre profil ?
+        </h2>
+        <p style="font-size:13px; color:var(--text-2); text-align:center; margin-bottom:0;">
+          Sélectionnez votre rôle dans la communauté
+        </p>
+
+        <div class="role-pick-grid">
+          <div class="role-pick-card" data-role="visitor" id="card-visitor">
+            <span class="rp-check">✓</span>
+            <span class="rp-icon">👁️</span>
+            <div class="rp-name">Visiteur</div>
+            <p class="rp-desc">Découvrir et suivre les événements sportifs</p>
+          </div>
+          <div class="role-pick-card" data-role="joueur" id="card-joueur">
+            <span class="rp-check">✓</span>
+            <span class="rp-icon">⚽</span>
+            <div class="rp-name">Joueur</div>
+            <p class="rp-desc">Participer aux compétitions et tournois</p>
+          </div>
+        </div>
+
+        <button id="btnNextStep" class="btn btn-primary mt-16" disabled>
+          Continuer →
+        </button>
+      </div>
+
+      <!-- ═══════ STEP 2: Registration Form ═══════ -->
+      <div class="step" id="step2">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+          <button id="btnBack" type="button"
+            style="background:none; border:none; color:var(--text-2); cursor:pointer; font-size:20px; padding:4px 8px; border-radius:8px; transition: all .2s;">
+            ←
+          </button>
+          <div>
+            <h2 style="font-size:18px; font-weight:700; color:var(--text); margin:0;" id="formTitle">
+              Inscription Visiteur
+            </h2>
+            <p style="font-size:12px; color:var(--text-2); margin:2px 0 0;" id="formSubtitle">
+              Remplissez vos informations personnelles
+            </p>
+          </div>
+        </div>
+
+        <form id="registerForm" novalidate>
+          <!-- Nom & Prenom side by side -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="nom">Nom</label>
+              <input id="nom" type="text" placeholder="Votre nom" autocomplete="family-name" required>
+              <p class="form-hint" id="nomHint">Minimum 2 caractères</p>
+            </div>
+            <div class="form-group">
+              <label for="prenom">Prénom</label>
+              <input id="prenom" type="text" placeholder="Votre prénom" autocomplete="given-name" required>
+              <p class="form-hint" id="prenomHint">Minimum 2 caractères</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="address">Adresse</label>
+            <input id="address" type="text" placeholder="Votre adresse complète" autocomplete="street-address" required>
+            <p class="form-hint" id="addressHint">Veuillez entrer votre adresse</p>
+          </div>
+
+          <div class="form-group">
+            <label for="email">Adresse email</label>
+            <input id="email" type="email" placeholder="votre.email@domaine.com" autocomplete="email" required>
+            <p class="form-hint" id="emailHint">Veuillez entrer un email valide</p>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <div class="input-wrapper">
+              <input id="password" type="password" placeholder="Minimum 6 caractères" autocomplete="new-password"
+                required>
+              <button type="button" class="eye-toggle" id="togglePw" tabindex="-1"
+                aria-label="Afficher le mot de passe">
+                <svg id="eyeIconPw" viewBox="0 0 24 24">
+                  <path
+                    d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                </svg>
+              </button>
+            </div>
+            <p class="form-hint" id="passwordHint">Le mot de passe est trop court</p>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">Confirmer le mot de passe</label>
+            <div class="input-wrapper">
+              <input id="confirmPassword" type="password" placeholder="Répétez le mot de passe"
+                autocomplete="new-password" required>
+              <button type="button" class="eye-toggle" id="toggleCpw" tabindex="-1"
+                aria-label="Afficher la confirmation">
+                <svg id="eyeIconCpw" viewBox="0 0 24 24">
+                  <path
+                    d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
+                </svg>
+              </button>
+            </div>
+            <p class="form-hint" id="confirmHint">Les mots de passe ne correspondent pas</p>
+          </div>
+
+          <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
+            <label for="profileImage">Photo de Profil (optionnel)</label>
+            <input id="profileImage" type="file" accept="image/*" style="padding:10px">
+          </div>
+
+          <!-- JOUEUR FIELDS -->
+          <div id="joueurFields" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
+            <h3 style="font-size:14px;margin-bottom:12px;color:var(--text)">Informations Joueur</h3>
+            <div class="form-group">
+              <label for="practiceSport">Sport pratiqué *</label>
+              <select id="practiceSport"><option value="">— Choisir votre sport —</option></select>
+              <p class="form-hint" id="practiceSportHint">Requis</p>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="form-group"><label for="age">Âge</label><input id="age" type="number" placeholder="Ex: 25"><p class="form-hint" id="ageHint">Requis</p></div>
+              <div class="form-group"><label for="height">Taille (cm)</label><input id="height" type="number" step="0.1" placeholder="Ex: 180"><p class="form-hint" id="heightHint">Requis</p></div>
+              <div class="form-group"><label for="weight">Poids (kg)</label><input id="weight" type="number" step="0.1" placeholder="Ex: 75"><p class="form-hint" id="weightHint">Requis</p></div>
+              <div class="form-group"><label for="ranking">Classement</label><input id="ranking" type="text" placeholder="Ex: 15/4"><p class="form-hint" id="rankingHint">Requis</p></div>
+            </div>
+            <div class="form-group"><label for="meanGlobalRanking">Classement Global Moyen</label><input id="meanGlobalRanking" type="text" placeholder="Votre classement global"><p class="form-hint" id="meanGlobalRankingHint">Requis</p></div>
+          </div>
+
+          <!-- VISITOR FIELDS -->
+          <div id="visitorFields" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
+            <h3 style="font-size:14px;margin-bottom:12px;color:var(--text)">Sports qui vous intéressent</h3>
+            <p style="font-size:12px;color:var(--text-2);margin-bottom:12px">Sélectionnez les sports et activez les notifications pour recevoir des emails</p>
+            <div class="sport-chips" id="visitorSportsChips"></div>
+            <div id="notifySection" style="margin-top:12px;display:none">
+              <label style="font-size:13px;font-weight:600;color:var(--text-2);display:block;margin-bottom:8px">🔔 Recevoir des notifications pour :</label>
+              <div id="notifySportsList"></div>
+            </div>
+          </div>
+
+          <button id="btnRegister" type="submit" class="btn btn-primary mt-16">
+            Finaliser l'inscription
+          </button>
+        </form>
+      </div>
+
+      <div class="divider">Déjà membre ?</div>
+
+      <div class="link-row">
+        Vous avez déjà un compte ? <a href="login.html">Se connecter</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Auth.redirectIfAuth();
+
+    // ── SVG icons ───────────────────────────────────────────
+    const EYE_OPEN = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+    const EYE_CLOSED = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.8 11.8 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+
+    // ── Elements ────────────────────────────────────────────
+    let selectedRole = null;
+    const step1 = document.getElementById("step1");
+    const step2 = document.getElementById("step2");
+    const btnNext = document.getElementById("btnNextStep");
+    const btnBack = document.getElementById("btnBack");
+    const dot1 = document.getElementById("dot1");
+    const dot2 = document.getElementById("dot2");
+    const line1 = document.getElementById("line1");
+    const formTitle = document.getElementById("formTitle");
+    const formSub = document.getElementById("formSubtitle");
+    const alertZone = document.getElementById("alertZone");
+
+    const form = document.getElementById("registerForm");
+    const nomEl = document.getElementById("nom");
+    const prenomEl = document.getElementById("prenom");
+    const addressEl = document.getElementById("address");
+    const emailEl = document.getElementById("email");
+    const pwEl = document.getElementById("password");
+    const cpwEl = document.getElementById("confirmPassword");
+    const joueurF = document.getElementById("joueurFields");
+    const ageEl = document.getElementById("age");
+    const heightEl = document.getElementById("height");
+    const weightEl = document.getElementById("weight");
+    const rankingEl = document.getElementById("ranking");
+    const meanGlobalEl = document.getElementById("meanGlobalRanking");
+    const profileImgEl = document.getElementById("profileImage");
+    const btnReg = document.getElementById("btnRegister");
+
+    function showAlert(msg, type = "error") {
+      alertZone.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+    }
+    function hint(id, visible) {
+      document.getElementById(id).classList.toggle("visible", visible);
+    }
+
+    // ── STEP 1: Role Selection ──────────────────────────────
+    document.querySelectorAll(".role-pick-card").forEach(card => {
+      card.addEventListener("click", () => {
+        document.querySelectorAll(".role-pick-card").forEach(c => c.classList.remove("selected"));
+        card.classList.add("selected");
+        selectedRole = card.dataset.role;
+        btnNext.disabled = false;
+      });
+    });
+
+    btnNext.addEventListener("click", () => {
+      if (!selectedRole) return;
+      // Transition to step 2
+      step1.classList.remove("active");
+      step2.classList.add("active", "slide-in");
+      dot1.classList.remove("active");
+      dot1.classList.add("done");
+      line1.classList.add("done");
+      dot2.classList.add("active");
+      alertZone.innerHTML = "";
+
+      // Update title based on role
+      if (selectedRole === "visitor") {
+        formTitle.textContent = "Inscription Visiteur";
+        formSub.textContent = "Remplissez vos informations pour découvrir les événements";
+        joueurF.style.display = "none";
+        document.getElementById("visitorFields").style.display = "block";
+        buildVisitorSports();
+      } else {
+        formTitle.textContent = "Inscription Joueur";
+        formSub.textContent = "Remplissez vos informations pour participer aux compétitions";
+        joueurF.style.display = "block";
+        document.getElementById("visitorFields").style.display = "none";
+        buildPracticeSportSelect();
+      }
+      nomEl.focus();
+    });
+
+    btnBack.addEventListener("click", () => {
+      step2.classList.remove("active", "slide-in");
+      step1.classList.add("active");
+      dot2.classList.remove("active");
+      dot1.classList.remove("done");
+      dot1.classList.add("active");
+      line1.classList.remove("done");
+      alertZone.innerHTML = "";
+    });
+    btnBack.addEventListener("mouseenter", () => { btnBack.style.color = "var(--blue-hover)"; });
+    btnBack.addEventListener("mouseleave", () => { btnBack.style.color = "var(--text-2)"; });
+
+    // ── Eye toggles ─────────────────────────────────────────
+    function setupEyeToggle(toggleBtn, inputEl, svgEl) {
+      let visible = false;
+      toggleBtn.addEventListener("click", () => {
+        visible = !visible;
+        inputEl.type = visible ? "text" : "password";
+        svgEl.innerHTML = visible ? EYE_CLOSED : EYE_OPEN;
+      });
+    }
+    setupEyeToggle(
+      document.getElementById("togglePw"),
+      pwEl,
+      document.getElementById("eyeIconPw")
+    );
+    setupEyeToggle(
+      document.getElementById("toggleCpw"),
+      cpwEl,
+      document.getElementById("eyeIconCpw")
+    );
+
+    // ── Live Validation ─────────────────────────────────────
+    cpwEl.addEventListener("input", () => {
+      const mismatch = cpwEl.value && cpwEl.value !== pwEl.value;
+      cpwEl.classList.toggle("error", mismatch);
+      hint("confirmHint", mismatch);
+    });
+    pwEl.addEventListener("input", () => {
+      const pw = pwEl.value;
+      const tooShort = pw.length > 0 && pw.length < 6;
+      pwEl.classList.toggle("error", tooShort);
+      hint("passwordHint", tooShort);
+      if (cpwEl.value) {
+        const mismatch = cpwEl.value !== pw;
+        cpwEl.classList.toggle("error", mismatch);
+        hint("confirmHint", mismatch);
+      }
+    });
+    nomEl.addEventListener("input", () => { nomEl.classList.remove("error"); hint("nomHint", false); });
+    prenomEl.addEventListener("input", () => { prenomEl.classList.remove("error"); hint("prenomHint", false); });
+    addressEl.addEventListener("input", () => { addressEl.classList.remove("error"); hint("addressHint", false); });
+    emailEl.addEventListener("input", () => { emailEl.classList.remove("error"); hint("emailHint", false); });
+
+    // ── Submit ──────────────────────────────────────────────
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alertZone.innerHTML = "";
+
+      const nom = nomEl.value.trim();
+      const prenom = prenomEl.value.trim();
+      const address = addressEl.value.trim();
+      const email = emailEl.value.trim();
+      const pw = pwEl.value;
+      const cpw = cpwEl.value;
+
+      let valid = true;
+
+      if (nom.length < 2) {
+        nomEl.classList.add("error"); hint("nomHint", true); valid = false;
+      }
+      if (prenom.length < 2) {
+        prenomEl.classList.add("error"); hint("prenomHint", true); valid = false;
+      }
+      if (!address) {
+        addressEl.classList.add("error"); hint("addressHint", true); valid = false;
+      }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailEl.classList.add("error"); hint("emailHint", true); valid = false;
+      }
+      if (pw.length < 6) {
+        pwEl.classList.add("error"); hint("passwordHint", true); valid = false;
+      }
+      if (pw !== cpw) {
+        cpwEl.classList.add("error"); hint("confirmHint", true); valid = false;
+      }
+      if (!valid) return;
+
+      if (selectedRole === "joueur") {
+        if (!document.getElementById("practiceSport").value) { valid = false; hint("practiceSportHint", true); }
+        if (!ageEl.value) { ageEl.classList.add("error"); hint("ageHint", true); valid = false; }
+        if (!heightEl.value) { heightEl.classList.add("error"); hint("heightHint", true); valid = false; }
+        if (!weightEl.value) { weightEl.classList.add("error"); hint("weightHint", true); valid = false; }
+        if (!rankingEl.value) { rankingEl.classList.add("error"); hint("rankingHint", true); valid = false; }
+        if (!meanGlobalEl.value) { meanGlobalEl.classList.add("error"); hint("meanGlobalRankingHint", true); valid = false; }
+      }
+      if (!valid) return;
+
+      setButtonLoading(btnReg, true, "Finaliser l'inscription");
+
+      try {
+        const payload = {
+          nom,
+          prenom,
+          address,
+          email,
+          password: pw,
+          role: selectedRole
+        };
+
+        if (profileImgEl.files[0]) {
+          payload.profile_image_base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(profileImgEl.files[0]);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+          });
+        }
+
+        if (selectedRole === "joueur") {
+          payload.practice_sport = document.getElementById("practiceSport").value;
+          payload.age = parseInt(ageEl.value, 10);
+          payload.height = parseFloat(heightEl.value);
+          payload.weight = parseFloat(weightEl.value);
+          payload.ranking = rankingEl.value;
+          payload.mean_global_ranking = meanGlobalEl.value;
+        }
+
+        if (selectedRole === "visitor") {
+          const selChips = document.querySelectorAll("#visitorSportsChips .sport-chip.selected");
+          payload.favorite_sports = Array.from(selChips).map(c => c.dataset.sport);
+          const notifyChecks = document.querySelectorAll(".notify-check:checked");
+          payload.notify_sports = Array.from(notifyChecks).map(c => c.dataset.sport);
+        }
+
+        await API.register(payload);
+        sessionStorage.setItem("otp_email", email);
+        window.location.href = "verify-otp.html";
+      } catch (err) {
+        showAlert(err.message);
+        setButtonLoading(btnReg, false, "Finaliser l'inscription");
+      }
+    });
+
+    function buildPracticeSportSelect() {
+      const sel = document.getElementById("practiceSport");
+      if (sel.options.length > 1) return;
+      SPORTS_LIST.forEach(s => { const o = document.createElement("option"); o.value = s; o.textContent = s; sel.appendChild(o); });
+    }
+
+    function buildVisitorSports() {
+      const container = document.getElementById("visitorSportsChips");
+      if (container.children.length) return;
+      SPORTS_LIST.forEach(s => {
+        const chip = document.createElement("div");
+        chip.className = "sport-chip";
+        chip.dataset.sport = s;
+        chip.textContent = s;
+        chip.addEventListener("click", () => {
+          chip.classList.toggle("selected");
+          updateNotifySection();
+        });
+        container.appendChild(chip);
+      });
+    }
+
+    function updateNotifySection() {
+      const selected = document.querySelectorAll("#visitorSportsChips .sport-chip.selected");
+      const section = document.getElementById("notifySection");
+      const list = document.getElementById("notifySportsList");
+      if (!selected.length) { section.style.display = "none"; return; }
+      section.style.display = "block";
+      list.innerHTML = "";
+      selected.forEach(c => {
+        const s = c.dataset.sport;
+        const row = document.createElement("label");
+        row.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-3);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:13px;color:var(--text)";
+        row.innerHTML = `<input type="checkbox" class="notify-check" data-sport="${s}" checked style="accent-color:var(--blue);width:16px;height:16px"> ${s} <span style="color:var(--text-3);font-size:11px;margin-left:auto">Recevoir les emails</span>`;
+        list.appendChild(row);
+      });
+    }
+  </script>
+</body>
+
+</html>

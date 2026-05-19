@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil Utilisateur – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .settings-layout {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    
+    .settings-section {
+      background: var(--glass-bg);
+      backdrop-filter: var(--backdrop);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-xl);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    .settings-section h2 {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 24px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 8px; }
+    .form-control { width: 100%; padding: 14px 16px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: var(--r-lg); color: var(--text); font-family: inherit; font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .form-control:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(31,107,255,0.2); }
+    .form-control:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .avatar-upload {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .avatar-preview {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border);
+      background: var(--bg-3);
+    }
+    
+    .btn-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .otp-section {
+      display: none;
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(31,107,255,0.05);
+      border: 1px solid rgba(31,107,255,0.2);
+      border-radius: var(--r-lg);
+    }
+
+    .otp-section.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="navbar-user">
+      <button class="btn btn-ghost btn-sm" onclick="history.back()">← Retour</button>
+    </div>
+  </nav>
+
+  <main class="settings-layout">
+    <div class="settings-section">
+      <h2>👤 Mon Profil</h2>
+      <form id="profileForm" onsubmit="handleProfileUpdate(event)">
+        <div class="avatar-upload">
+          <img id="avatarPreview" class="avatar-preview" src="../images/default-avatar.png" alt="Avatar">
+          <div>
+            <label for="avatarInput" class="btn btn-outline btn-sm">Changer la photo</label>
+            <input type="file" id="avatarInput" accept="image/jpeg, image/png" style="display: none;" onchange="handleAvatarSelect(event)">
+            <p style="font-size: 12px; color: var(--text-3); margin-top: 8px;">JPG ou PNG, max 2MB</p>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btnUpdateProfile">Mettre à jour le profil</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="settings-section">
+      <h2>📧 Paramètres Email</h2>
+      <form id="emailForm" onsubmit="handleEmailChange(event)">
+        <div class="form-group">
+          <label>Email actuel</label>
+          <input type="email" id="currentEmail" class="form-control" disabled>
+        </div>
+        <div class="form-group">
+          <label>Nouvel email</label>
+          <input type="email" id="newEmail" class="form-control" required>
+        </div>
+        
+        <div class="btn-row" id="emailActionRow">
+          <button type="submit" class="btn btn-outline" id="btnReqEmail">Demander le changement</button>
+        </div>
+
+        <div id="emailOtpSection" class="otp-section">
+          <p style="font-size: 13px; color: var(--text-2); margin-bottom: 12px;">Un code de vérification a été envoyé à vos adresses email (ancienne et nouvelle).</p>
+          <div class="form-group">
+            <label>Code de vérification (OTP)</label>
+            <input type="text" id="emailOtp" class="form-control" placeholder="Entrez le code à 6 chiffres" maxlength="6">
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" onclick="confirmEmailChange()" id="btnConfirmEmail">Confirmer le nouvel email</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="settings-section">
+      <h2>🔒 Sécurité</h2>
+      
+      <div style="margin-bottom: 24px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="pwdMethod" value="old_pwd" checked onchange="togglePwdMethod()">
+          Utiliser mon ancien mot de passe
+        </label>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; margin-top: 8px;">
+          <input type="radio" name="pwdMethod" value="otp" onchange="togglePwdMethod()">
+          Utiliser un code envoyé par email
+        </label>
+      </div>
+
+      <form id="pwdForm" onsubmit="handlePasswordChange(event)">
+        
+        <div id="pwdOldSection">
+          <div class="form-group">
+            <label>Ancien mot de passe</label>
+            <input type="password" id="oldPwd" class="form-control">
+          </div>
+        </div>
+
+        <div id="pwdOtpSection" style="display: none;">
+          <div class="form-group">
+            <button type="button" class="btn btn-outline btn-sm" onclick="requestPwdOtp()" id="btnReqPwdOtp">Recevoir un code par email</button>
+          </div>
+          <div class="form-group otp-section" id="pwdOtpInputSection">
+            <label>Code de vérification (OTP)</label>
+            <input type="text" id="pwdOtp" class="form-control" placeholder="Code à 6 chiffres" maxlength="6">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 24px;">
+          <label>Nouveau mot de passe</label>
+          <input type="password" id="newPwd" class="form-control" required minlength="6">
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btnChangePwd">Changer le mot de passe</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    let currentUser = null;
+    let selectedAvatarBase64 = null;
+
+    async function loadData() {
+      try {
+        currentUser = await API.getMe();
+        document.getElementById('currentEmail').value = currentUser.email;
+        if (currentUser.profile_image) {
+          document.getElementById('avatarPreview').src = getProfileImageUrl(currentUser.profile_image);
+        }
+      } catch (err) {
+        alert("Erreur: " + err.message);
+        window.location.href = "login.html";
+      }
+    }
+
+    function handleAvatarSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        alert("La photo ne doit pas dépasser 2MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        selectedAvatarBase64 = evt.target.result;
+        document.getElementById('avatarPreview').src = selectedAvatarBase64;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function handleProfileUpdate(e) {
+      e.preventDefault();
+      if (!selectedAvatarBase64) {
+        alert("Aucune nouvelle photo sélectionnée.");
+        return;
+      }
+      
+      const btn = document.getElementById('btnUpdateProfile');
+      btn.disabled = true;
+      btn.innerText = "Mise à jour...";
+      try {
+        const res = await API.fetchAPI("/api/auth/profile", {
+          method: "PUT",
+          body: JSON.stringify({ profile_image_base64: selectedAvatarBase64 })
+        });
+        alert(res.message || "Profil mis à jour !");
+        loadData();
+      } catch (err) {
+        alert("Erreur: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Mettre à jour le profil";
+      }
+    }
+
+    // Email Change Flow
+    async function handleEmailChange(e) {
+      e.preventDefault();
+      const newEmail = document.getElementById('newEmail').value.trim();
+      if (!newEmail || newEmail === currentUser.email) {
+        alert("Veuillez entrer une nouvelle adresse email différente de l'actuelle.");
+        return;
+      }
+
+      const btn = document.getElementById('btnReqEmail');
+      btn.disabled = true;
+      btn.innerText = "Envoi...";
+      try {
+        const res = await API.fetchAPI("/api/auth/request-email-change", {
+          method: "POST",
+          body: JSON.stringify({ new_email: newEmail })
+        });
+        alert(res.message);
+        document.getElementById('emailActionRow').style.display = 'none';
+        document.getElementById('emailOtpSection').classList.add('active');
+        document.getElementById('newEmail').disabled = true;
+      } catch (err) {
+        alert("Erreur: " + err.message);
+        btn.disabled = false;
+        btn.innerText = "Demander le changement";
+      }
+    }
+
+    async function confirmEmailChange() {
+      const newEmail = document.getElementById('newEmail').value.trim();
+      const otp = document.getElementById('emailOtp').value.trim();
+      if (!otp || otp.length !== 6) {
+        alert("Veuillez entrer le code à 6 chiffres.");
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmEmail');
+      btn.disabled = true;
+      btn.innerText = "Vérification...";
+      try {
+        const res = await API.fetchAPI("/api/auth/confirm-email-change", {
+          method: "POST",
+          body: JSON.stringify({ new_email: newEmail, otp: otp })
+        });
+        alert(res.message);
+        window.location.reload();
+      } catch (err) {
+        alert("Erreur: " + err.message);
+        btn.disabled = false;
+        btn.innerText = "Confirmer le nouvel email";
+      }
+    }
+
+    // Password Change Flow
+    function togglePwdMethod() {
+      const method = document.querySelector('input[name="pwdMethod"]:checked').value;
+      if (method === 'old_pwd') {
+        document.getElementById('pwdOldSection').style.display = 'block';
+        document.getElementById('pwdOtpSection').style.display = 'none';
+        document.getElementById('oldPwd').required = true;
+        document.getElementById('pwdOtp').required = false;
+      } else {
+        document.getElementById('pwdOldSection').style.display = 'none';
+        document.getElementById('pwdOtpSection').style.display = 'block';
+        document.getElementById('oldPwd').required = false;
+        document.getElementById('pwdOtp').required = true;
+      }
+    }
+
+    async function requestPwdOtp() {
+      const btn = document.getElementById('btnReqPwdOtp');
+      btn.disabled = true;
+      btn.innerText = "Envoi...";
+      try {
+        const res = await API.fetchAPI("/api/auth/request-password-change-otp", { method: "POST" });
+        alert(res.message);
+        document.getElementById('pwdOtpInputSection').classList.add('active');
+        btn.innerText = "Renvoyer le code";
+        btn.disabled = false;
+      } catch (err) {
+        alert("Erreur: " + err.message);
+        btn.disabled = false;
+        btn.innerText = "Recevoir un code par email";
+      }
+    }
+
+    async function handlePasswordChange(e) {
+      e.preventDefault();
+      const method = document.querySelector('input[name="pwdMethod"]:checked').value;
+      const newPwd = document.getElementById('newPwd').value;
+      
+      const payload = { new_password: newPwd };
+      if (method === 'old_pwd') {
+        payload.old_password = document.getElementById('oldPwd').value;
+      } else {
+        payload.otp = document.getElementById('pwdOtp').value;
+      }
+
+      const btn = document.getElementById('btnChangePwd');
+      btn.disabled = true;
+      btn.innerText = "Modification...";
+      try {
+        const res = await API.fetchAPI("/api/auth/change-password", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        alert(res.message);
+        e.target.reset();
+        togglePwdMethod();
+        document.getElementById('pwdOtpInputSection').classList.remove('active');
+      } catch (err) {
+        alert("Erreur: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Changer le mot de passe";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      togglePwdMethod();
+      loadData();
+    });
+  </script>
+</body>
+</html>

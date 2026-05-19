@@ -1,0 +1,74 @@
+# ── Secrets & Environment ─────────────────────────────────────────────────────
+backend/.env
+!backend/.env.example
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+backend/venv/
+venv/
+env/
+.venv/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+*.whl
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ── IDE & OS ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── User-uploaded & generated media ───────────────────────────────────────────
+uploads/
+photos/
+# Keep the directory stubs (tracked via .gitkeep)
+!uploads/.gitkeep
+!photos/.gitkeep
+
+# ── Archives / large build artifacts ──────────────────────────────────────────
+*.zip
+*.tar.gz
+*.7z
+*.rar
+
+# ── Scratch / dev notes ────────────────────────────────────────────────────────
+scratch/
+conv.md
+Resolving Authentication ValueError Exception.md
+Preparing SportEventsWeb For GitHub.md
+
+# ── Dev / test scripts ────────────────────────────────────────────────────────
+test_fastapi.py
+test_fastapi2.py
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Node (if ever added) ──────────────────────────────────────────────────────
+node_modules/

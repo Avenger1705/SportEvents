@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Préférences athlète – Sport Events</title>
+  <meta name="description" content="Choisissez votre sport principal et vos intérêts sportifs.">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 10px;
+    }
+    .divider-section {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+    #slidersContainer { margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper" style="padding-top:40px;padding-bottom:80px;">
+    <div class="wide-card">
+      <div class="auth-logo">
+        <span class="icon">🏃</span>
+        <h1>Profil Athlète</h1>
+        <p>Aidez-nous à personnaliser votre expérience</p>
+      </div>
+
+      <div id="alertZone"></div>
+
+      <!-- Practice sport -->
+      <div class="divider">Discipline principale</div>
+      <div class="form-group">
+        <label for="practiceSport">Quel sport pratiquez-vous le plus ?</label>
+        <select id="practiceSport">
+          <option value="" disabled selected>Choisir une discipline…</option>
+        </select>
+      </div>
+
+      <div class="divider">Centres d'intérêt</div>
+      <p class="text-sm text-muted mb-16" style="text-align: center;">
+        Sélectionnez d'autres sports qui vous passionnent.
+      </p>
+
+      <div class="sport-chips" id="sportChips"></div>
+
+      <!-- Interest level sliders -->
+      <div id="slidersContainer"></div>
+
+      <button id="btnSave" class="btn btn-primary mt-24" disabled>
+        Valider mes préférences →
+      </button>
+
+      <div class="link-row">
+        <a href="role-selection.html" style="color: var(--text-2);">← Revenir au choix du rôle</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Auth.requireAuth();
+
+    const selectEl         = document.getElementById("practiceSport");
+    const chipsContainer   = document.getElementById("sportChips");
+    const slidersContainer = document.getElementById("slidersContainer");
+    const btnSave          = document.getElementById("btnSave");
+    const alertZone        = document.getElementById("alertZone");
+
+    let practiceSport   = "";
+    let selectedSports  = new Set();
+    let interestLevels  = {};   // { sportName: 1–5 }
+
+    // ── Populate practice sport dropdown ──────────────────────────────────────
+    SPORTS_LIST.forEach(sport => {
+      const opt = document.createElement("option");
+      opt.value = sport;
+      opt.textContent = sport;
+      selectEl.appendChild(opt);
+    });
+
+    selectEl.addEventListener("change", () => {
+      practiceSport = selectEl.value;
+      // Auto-select the practice sport in chips
+      if (!selectedSports.has(practiceSport)) {
+        selectedSports.add(practiceSport);
+        if (!interestLevels[practiceSport]) interestLevels[practiceSport] = 5;
+        renderChips();
+        renderSliders();
+      }
+      updateButton();
+    });
+
+    // ── Build sport chips ─────────────────────────────────────────────────────
+    function renderChips() {
+      chipsContainer.innerHTML = "";
+      SPORTS_LIST.forEach(sport => {
+        const chip = document.createElement("div");
+        chip.className = "sport-chip" + (selectedSports.has(sport) ? " selected" : "");
+        chip.textContent = sport;
+        chip.addEventListener("click", () => {
+          if (sport === practiceSport) return; // can't deselect practice sport
+          if (selectedSports.has(sport)) {
+            selectedSports.delete(sport);
+            delete interestLevels[sport];
+          } else {
+            selectedSports.add(sport);
+            if (!interestLevels[sport]) interestLevels[sport] = 3;
+          }
+          renderChips();
+          renderSliders();
+          updateButton();
+        });
+        chipsContainer.appendChild(chip);
+      });
+    }
+
+    // ── Build interest sliders ────────────────────────────────────────────────
+    function renderSliders() {
+      slidersContainer.innerHTML = "";
+      if (selectedSports.size === 0) return;
+
+      const titleEl = document.createElement("p");
+      titleEl.className = "section-label";
+      titleEl.style.marginTop = "8px";
+      titleEl.textContent = "Niveau d'intérêt par sport";
+      slidersContainer.appendChild(titleEl);
+
+      [...selectedSports].forEach(sport => {
+        const level = interestLevels[sport] ?? 3;
+        const fill  = ((level - 1) / 4) * 100;
+
+        const group = document.createElement("div");
+        group.className = "slider-group";
+        group.innerHTML = `
+          <div class="slider-header">
+            <span class="slider-sport-name">${sport}</span>
+            <span class="slider-value" id="val-${sanitize(sport)}">${level} / 5</span>
+          </div>
+          <input
+            type="range" min="1" max="5" value="${level}"
+            data-sport="${sport}"
+            style="--fill:${fill}%"
+          >
+        `;
+        slidersContainer.appendChild(group);
+
+        group.querySelector("input[type=range]").addEventListener("input", (e) => {
+          const v = parseInt(e.target.value);
+          interestLevels[sport] = v;
+          const pct = ((v - 1) / 4) * 100;
+          e.target.style.setProperty("--fill", pct + "%");
+          document.getElementById("val-" + sanitize(sport)).textContent = v + " / 5";
+        });
+      });
+    }
+
+    function sanitize(str) {
+      return str.replace(/[^a-zA-Z0-9]/g, "_");
+    }
+
+    function updateButton() {
+      btnSave.disabled = !practiceSport || selectedSports.size === 0;
+    }
+
+    // ── Save ──────────────────────────────────────────────────────────────────
+    btnSave.addEventListener("click", async () => {
+      alertZone.innerHTML = "";
+      setButtonLoading(btnSave, true, "Enregistrer et continuer →");
+
+      try {
+        await API.saveAthletePreferences(
+          practiceSport,
+          [...selectedSports],
+          interestLevels
+        );
+        showToast("✅ Préférences sauvegardées !", "success");
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 600);
+      } catch (err) {
+        alertZone.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+        setButtonLoading(btnSave, false, "Enregistrer et continuer →");
+      }
+    });
+
+    // Init chips
+    renderChips();
+  </script>
+</body>
+</html>

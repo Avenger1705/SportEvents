@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Détail de l'événement – Sport Events</title>
+  <meta name="description" content="Détail complet de l'événement sportif, galerie photos et localisation.">
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- Leaflet map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/api.js"></script>
+  <style>
+    .detail-layout {
+      position: relative; z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* Back button */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--text-2); font-size: 14px; font-weight: 500;
+      text-decoration: none;
+      background: var(--glass);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 8px 18px;
+      margin-bottom: 28px;
+      transition: all .2s;
+    }
+    .back-btn:hover { color: var(--text); border-color: var(--blue); }
+
+    /* Hero cover */
+    .ev-cover {
+      width: 100%; height: 360px;
+      object-fit: cover;
+      border-radius: 20px;
+      margin-bottom: 28px;
+      border: 1px solid var(--border);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+      display: block;
+    }
+    .ev-cover-placeholder {
+      width: 100%; height: 280px;
+      border-radius: 20px;
+      margin-bottom: 28px;
+      background: linear-gradient(135deg, #1a2237, #0d1b40);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 72px;
+      border: 1px solid var(--border);
+    }
+
+    /* Sport badge on detail */
+    .ev-sport-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 800;
+      color: var(--blue-hover);
+      text-transform: uppercase; letter-spacing: 1.4px;
+      margin-bottom: 12px;
+    }
+    .ev-sport-label::before {
+      content: ''; width: 7px; height: 7px;
+      background: var(--blue); border-radius: 50%;
+      box-shadow: 0 0 8px var(--blue);
+    }
+
+    .ev-title {
+      font-size: 36px; font-weight: 900;
+      letter-spacing: -0.8px; line-height: 1.2;
+      margin-bottom: 20px;
+    }
+
+    /* Info chips */
+    .ev-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .ev-meta-chip {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex; align-items: flex-start; gap: 12px;
+      backdrop-filter: var(--backdrop);
+    }
+    .ev-meta-icon { font-size: 22px; flex-shrink: 0; }
+    .ev-meta-label { font-size: 11px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .8px; }
+    .ev-meta-value { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
+    /* Description */
+    .ev-section-title {
+      font-size: 18px; font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .ev-description {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      font-size: 15px; line-height: 1.75;
+      color: var(--text-2);
+      margin-bottom: 36px;
+      backdrop-filter: var(--backdrop);
+    }
+
+    /* Added by */
+    .ev-author-chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--blue-subtle);
+      border: 1px solid rgba(31,107,255,0.25);
+      border-radius: 100px;
+      padding: 8px 18px;
+      font-size: 13px; font-weight: 600;
+      color: var(--blue-hover);
+      margin-bottom: 32px;
+    }
+
+    /* Map */
+    #detailMap {
+      height: 300px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      margin-bottom: 36px;
+      overflow: hidden;
+    }
+
+    /* Photo gallery */
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+    .gallery-img {
+      width: 100%; aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all .25s;
+    }
+    .gallery-img:hover {
+      transform: scale(1.04);
+      border-color: var(--blue);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 9999;
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img {
+      max-width: 100%; max-height: 90vh;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+    .lightbox-close {
+      position: absolute; top: 20px; right: 20px;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white; font-size: 20px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .lightbox-close:hover { background: var(--red); }
+    .lightbox-prev, .lightbox-next {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white; font-size: 20px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .lightbox-prev { left: 16px; }
+    .lightbox-next { right: 16px; }
+    .lightbox-prev:hover, .lightbox-next:hover { background: rgba(31,107,255,0.6); }
+
+    /* Loading state */
+    .loading-box {
+      text-align: center; padding: 100px 24px; color: var(--text-2);
+    }
+    .loading-spinner-lg {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(31,107,255,0.2);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 600px) {
+      .ev-title { font-size: 26px; }
+      .ev-cover { height: 220px; }
+      .ev-cover-placeholder { height: 180px; font-size: 52px; }
+    }
+
+    /* Comments Section */
+    .comments-section {
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .comment-item {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      display: flex; gap: 14px;
+      animation: slideUp 0.4s ease-out backwards;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .comment-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--blue);
+      flex-shrink: 0;
+    }
+    .comment-content { flex: 1; }
+    .comment-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .comment-user { font-size: 14px; font-weight: 700; color: var(--text); }
+    .comment-date { font-size: 11px; color: var(--text-3); font-weight: 500; }
+    .comment-text { font-size: 14px; color: var(--text-2); line-height: 1.5; }
+    .comment-actions { margin-top: 8px; }
+    .btn-delete-comment {
+      background: none; border: none; color: var(--red);
+      font-size: 11px; font-weight: 700; cursor: pointer;
+      padding: 0; opacity: 0.7; transition: opacity 0.2s;
+    }
+    .btn-delete-comment:hover { opacity: 1; text-decoration: underline; }
+
+    .comment-form {
+      margin-top: 24px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .comment-input {
+      width: 100%; min-height: 80px;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: inherit; font-size: 14px;
+      resize: vertical; outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+    }
+    .comment-input:focus { border-color: var(--blue); }
+    .empty-comments {
+      text-align: center; padding: 40px 20px;
+      color: var(--text-3); font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span class="nav-icon">🏆</span>
+      Sport Events
+    </div>
+    <div class="navbar-user" style="display:flex; align-items:center; gap:12px;">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="Photo de profil" style="width:36px; height:36px; border-radius:50%; object-fit:cover; display:none; border:2px solid var(--blue);">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <main class="detail-layout" id="detailLayout">
+    <div class="loading-box">
+      <div class="loading-spinner-lg"></div>
+      <p>Chargement de l'événement…</p>
+    </div>
+  </main>
+
+  <div id="commentsPlaceholder" style="max-width:900px; margin: 0 auto; padding: 0 24px 80px;">
+    <!-- Comments will be rendered here -->
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lightboxClose">✕</button>
+    <button class="lightbox-prev" id="lightboxPrev">‹</button>
+    <img id="lightboxImg" src="" alt="Photo">
+    <button class="lightbox-next" id="lightboxNext">›</button>
+  </div>
+
+  <script>
+    Auth.requireAuth();
+
+    const username = Auth.getUsername() || "Utilisateur";
+    const myRole   = Auth.getRole();
+    document.getElementById("navUsername").textContent = username;
+
+    API.getMe().then(user => {
+      if (user.profile_image) {
+        const img = document.getElementById("navProfileImg");
+        img.src = `${API_BASE}/photos/${user.profile_image}`;
+        img.style.display = "block";
+      }
+    }).catch(console.error);
+
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      if (confirm("Se déconnecter ?")) Auth.logout();
+    });
+
+    // ── Load event from URL param ─────────────────────────────────────────────
+    const params  = new URLSearchParams(window.location.search);
+    const eventId = parseInt(params.get("id"), 10);
+
+    if (!eventId) {
+      document.getElementById("detailLayout").innerHTML = `
+        <a href="dashboard.html" class="back-btn">← Retour au tableau de bord</a>
+        <div class="ev-cover-placeholder">⚠️</div>
+        <p style="text-align:center;color:var(--text-2)">ID d'événement manquant.</p>`;
+    } else {
+      loadEvent(eventId);
+    }
+
+    async function loadEvent(id) {
+      try {
+        const ev = await API.getEvent(id);
+        renderEvent(ev);
+        await loadComments(id);
+        
+        // Auto scroll to comments if hash is present
+        if (window.location.hash === "#commentsPlaceholder") {
+          setTimeout(() => {
+            document.getElementById("commentsPlaceholder").scrollIntoView({ behavior: "smooth" });
+          }, 500);
+        }
+      } catch(err) {
+        document.getElementById("detailLayout").innerHTML = `
+          <a href="dashboard.html" class="back-btn">← Retour au tableau de bord</a>
+          <div class="ev-cover-placeholder">❌</div>
+          <p style="text-align:center;color:var(--text-2)">${err.message}</p>`;
+      }
+    }
+
+    // ── Render event ──────────────────────────────────────────────────────────
+    function renderEvent(ev) {
+      document.title = `${ev.title} – Sport Events`;
+
+      const allPhotos = []; // for lightbox
+
+      const layout = document.getElementById("detailLayout");
+
+      // Cover image
+      let coverHtml;
+      if (ev.cover_photo) {
+        const url = `${API_BASE}${ev.cover_photo}`;
+        allPhotos.push(url);
+        coverHtml = `<img class="ev-cover" src="${url}" alt="${ev.title}" onerror="this.style.display='none'">`;
+      } else {
+        coverHtml = `<div class="ev-cover-placeholder">${sportEmoji(ev.sport)}</div>`;
+      }
+
+      // Gallery
+      const galleryUrls = (ev.photos || []).map(p => `${API_BASE}${p.photo_path}`);
+      allPhotos.push(...galleryUrls);
+
+      const galleryHtml = galleryUrls.length > 0 ? `
+        <div class="ev-section-title">📸 Galerie photos</div>
+        <div class="gallery-grid">
+          ${galleryUrls.map((url, i) => `
+            <img class="gallery-img" src="${url}" alt="Photo ${i+1}"
+              data-idx="${i}" loading="lazy" onerror="this.style.display='none'">
+          `).join("")}
+        </div>` : "";
+
+      // Map
+      const mapHtml = (ev.latitude && ev.longitude)
+        ? `<div class="ev-section-title">🗺️ Localisation</div>
+           <div id="detailMap"></div>`
+        : "";
+
+      layout.innerHTML = `
+        <a href="dashboard.html" class="back-btn">← Retour au tableau de bord</a>
+        ${coverHtml}
+        <div class="ev-sport-label">${ev.sport || "Sport"}</div>
+        <h1 class="ev-title">${ev.title}</h1>
+        <div class="ev-author-chip">👤 Ajouté par : <span style="margin-left:4px;">${ev.organizer_name || "Inconnu"}</span></div>
+        <div class="ev-meta-grid">
+          ${ev.event_date ? `
+            <div class="ev-meta-chip">
+              <span class="ev-meta-icon">📅</span>
+              <div>
+                <div class="ev-meta-label">Date</div>
+                <div class="ev-meta-value">${formatDate(ev.event_date)}</div>
+              </div>
+            </div>` : ""}
+          ${ev.event_time ? `
+            <div class="ev-meta-chip">
+              <span class="ev-meta-icon">🕒</span>
+              <div>
+                <div class="ev-meta-label">Heure</div>
+                <div class="ev-meta-value">${ev.event_time}</div>
+              </div>
+            </div>` : ""}
+          ${ev.duration ? `
+            <div class="ev-meta-chip">
+              <span class="ev-meta-icon">⏱️</span>
+              <div>
+                <div class="ev-meta-label">Durée</div>
+                <div class="ev-meta-value">${ev.duration}</div>
+              </div>
+            </div>` : ""}
+          ${ev.location ? `
+            <div class="ev-meta-chip">
+              <span class="ev-meta-icon">📍</span>
+              <div>
+                <div class="ev-meta-label">Lieu</div>
+                <div class="ev-meta-value">${ev.location}</div>
+              </div>
+            </div>` : ""}
+          ${ev.sport ? `
+            <div class="ev-meta-chip">
+              <span class="ev-meta-icon">${sportEmoji(ev.sport)}</span>
+              <div>
+                <div class="ev-meta-label">Sport</div>
+                <div class="ev-meta-value">${ev.sport}</div>
+              </div>
+            </div>` : ""}
+        </div>
+        ${ev.description ? `
+          <div class="ev-section-title">📝 Description</div>
+          <div class="ev-description">${ev.description}</div>` : ""}
+        ${mapHtml}
+        <div id="weatherContainer"></div>
+        ${galleryHtml}
+      `;
+
+      // Init map
+      if (ev.latitude && ev.longitude) {
+        const map = L.map("detailMap").setView([ev.latitude, ev.longitude], 14);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors"
+        }).addTo(map);
+        L.marker([ev.latitude, ev.longitude])
+          .addTo(map)
+          .bindPopup(`<b>${ev.title}</b><br>${ev.location || ""}`)
+          .openPopup();
+          
+        loadWeather(ev.latitude, ev.longitude);
+      }
+
+      // Lightbox for gallery images
+      let currentLbIdx = ev.cover_photo ? 1 : 0; // skip cover in gallery
+      const lightbox    = document.getElementById("lightbox");
+      const lightboxImg = document.getElementById("lightboxImg");
+
+      layout.querySelectorAll(".gallery-img").forEach(img => {
+        img.addEventListener("click", () => {
+          const rawIdx = parseInt(img.dataset.idx, 10);
+          // offset by 1 if cover is at index 0
+          currentLbIdx = ev.cover_photo ? rawIdx + 1 : rawIdx;
+          openLightbox(currentLbIdx);
+        });
+      });
+
+      function openLightbox(idx) {
+        if (allPhotos.length === 0) return;
+        currentLbIdx = (idx + allPhotos.length) % allPhotos.length;
+        lightboxImg.src = allPhotos[currentLbIdx];
+        lightbox.classList.add("open");
+      }
+
+      document.getElementById("lightboxClose").onclick = () => lightbox.classList.remove("open");
+      document.getElementById("lightboxPrev").onclick  = () => openLightbox(currentLbIdx - 1);
+      document.getElementById("lightboxNext").onclick  = () => openLightbox(currentLbIdx + 1);
+      lightbox.addEventListener("click", e => { if (e.target === lightbox) lightbox.classList.remove("open"); });
+      document.addEventListener("keydown", e => {
+        if (!lightbox.classList.contains("open")) return;
+        if (e.key === "ArrowLeft")  openLightbox(currentLbIdx - 1);
+        if (e.key === "ArrowRight") openLightbox(currentLbIdx + 1);
+        if (e.key === "Escape")     lightbox.classList.remove("open");
+      });
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function formatDate(dt) {
+      if (!dt) return "—";
+      return new Date(dt).toLocaleDateString("fr-FR", {
+        day:"numeric", month:"long", year:"numeric",
+        hour:"2-digit", minute:"2-digit"
+      });
+    }
+
+    function sportEmoji(sport) {
+      const map = {
+        "Football":"⚽","Basketball":"🏀","Basketball 3x3":"🏀","Tennis":"🎾",
+        "Volleyball":"🏐","Beach Volleyball":"🏐","Natation":"🏊","Athlétisme":"🏃",
+        "Judo":"🥋","Boxe":"🥊","Cyclisme sur route":"🚴","BMX racing":"🚵",
+        "Escalade":"🧗","Golf":"⛳","Rugby":"🏉","Handball":"🤾",
+        "Hockey":"🏑","Surf":"🏄","Water-polo":"🤽",
+      };
+      return map[sport] || "🏆";
+    }
+
+    function loadWeather(lat, lng) {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto`;
+        fetch(url).then(r => r.json()).then(data => {
+            if (!data.daily) return;
+            const today = data.daily;
+            const weatherCodes = {
+                0: "☀️ Dégagé", 1: "🌤️ Peu nuageux", 2: "⛅ Mi-couvert", 3: "☁️ Couvert",
+                45: "🌫️ Brouillard", 48: "🌫️ Brouillard givrant",
+                51: "🌧️ Bruine", 53: "🌧️ Bruine", 55: "🌧️ Bruine forte",
+                61: "🌧️ Pluie", 63: "🌧️ Pluie", 65: "🌧️ Pluie forte",
+                71: "❄️ Neige", 73: "❄️ Neige", 75: "❄️ Neige forte",
+                80: "🌦️ Averses", 81: "🌦️ Averses", 82: "⛈️ Fortes averses",
+                95: "⛈️ Orage", 96: "⛈️ Orage", 99: "⛈️ Orage fort"
+            };
+            const w1 = weatherCodes[today.weathercode[0]] || "🌤️ Inconnu";
+            const w2 = weatherCodes[today.weathercode[1]] || "🌤️ Inconnu";
+            
+            document.getElementById("weatherContainer").innerHTML = `
+              <div class="ev-section-title">🌤️ Météo (Aujourd'hui & Demain)</div>
+              <div style="display:flex;gap:16px;margin-bottom:36px;flex-wrap:wrap;">
+                  <div class="ev-meta-chip" style="flex:1;">
+                      <div style="font-size:32px;margin-right:12px;">${w1.split(' ')[0]}</div>
+                      <div>
+                          <div class="ev-meta-label">Aujourd'hui</div>
+                          <div class="ev-meta-value">${w1.split(' ').slice(1).join(' ')} <span style="color:var(--text-3);margin-left:8px;">${today.temperature_2m_min[0]}°C / ${today.temperature_2m_max[0]}°C</span></div>
+                      </div>
+                  </div>
+                  <div class="ev-meta-chip" style="flex:1;">
+                      <div style="font-size:32px;margin-right:12px;">${w2.split(' ')[0]}</div>
+                      <div>
+                          <div class="ev-meta-label">Demain</div>
+                          <div class="ev-meta-value">${w2.split(' ').slice(1).join(' ')} <span style="color:var(--text-3);margin-left:8px;">${today.temperature_2m_min[1]}°C / ${today.temperature_2m_max[1]}°C</span></div>
+                      </div>
+                  </div>
+              </div>
+            `;
+        }).catch(err => console.error("Météo erreur:", err));
+    }
+
+    // ── Comments ──────────────────────────────────────────────────────────────
+    async function loadComments(id) {
+      const container = document.getElementById("commentsPlaceholder");
+      container.innerHTML = `<h2 class="ev-section-title">💬 Commentaires</h2><div class="loading-box" style="padding:40px;"><div class="loading-spinner-lg"></div></div>`;
+      
+      try {
+        const comments = await API.getEventComments(id);
+        renderComments(comments);
+      } catch (err) {
+        container.innerHTML = `<p style="color:var(--red)">Erreur lors du chargement des commentaires.</p>`;
+      }
+    }
+
+    function renderComments(comments) {
+      const container = document.getElementById("commentsPlaceholder");
+      let html = `<h2 class="ev-section-title">💬 Commentaires (${comments.length})</h2>`;
+
+      if (comments.length === 0) {
+        html += `<div class="empty-comments">Soyez le premier à donner votre avis sur cet événement !</div>`;
+      } else {
+        comments.forEach(c => {
+          const canDelete = (myRole === "admin");
+          html += `
+            <div class="comment-item">
+              <img class="comment-avatar" src="${getProfileImageUrl(c.user.profile_image)}" alt="${c.user.username}" onerror="this.src='../appphoto.png'">
+              <div class="comment-content">
+                <div class="comment-header">
+                  <span class="comment-user">${c.user.username}</span>
+                  <span class="comment-date">${formatDate(c.created_at)}</span>
+                </div>
+                <div class="comment-text">${c.content.replace(/\n/g, '<br>')}</div>
+                ${canDelete ? `
+                  <div class="comment-actions">
+                    <button class="btn-delete-comment" onclick="handleDeleteComment(${c.id})">🗑️ Supprimer</button>
+                  </div>` : ""}
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Add comment form
+      html += `
+        <div class="comment-form">
+          <textarea id="commentText" class="comment-input" placeholder="Votre avis sur cet événement…"></textarea>
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-primary" id="btnPostComment">Publier le commentaire</button>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+
+      document.getElementById("btnPostComment").addEventListener("click", postComment);
+    }
+
+    async function postComment() {
+      const text = document.getElementById("commentText").value.trim();
+      if (!text) return;
+
+      const btn = document.getElementById("btnPostComment");
+      const originalText = btn.textContent;
+      setButtonLoading(btn, true, originalText);
+
+      try {
+        await API.addEventComment(eventId, text);
+        showToast("Commentaire publié !", "success");
+        loadComments(eventId);
+      } catch (err) {
+        showToast(err.message, "error");
+      } finally {
+        setButtonLoading(btn, false, originalText);
+      }
+    }
+
+    async function handleDeleteComment(id) {
+      if (!confirm("Supprimer ce commentaire ?")) return;
+      try {
+        await API.deleteComment("event", id);
+        showToast("Commentaire supprimé", "success");
+        loadComments(eventId);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+    
+    function setButtonLoading(btn, loading, originalText) {
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="btn-spinner"></span>`;
+      } else {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
+  </script>
+</body>
+</html>

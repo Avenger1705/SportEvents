@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sport Events</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/api.js"></script>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <script>
+    // Redirect based on auth state
+    if (Auth.isLoggedIn()) {
+      window.location.href = "pages/dashboard.html";
+    } else {
+      window.location.href = "pages/login.html";
+    }
+  </script>
+  <noscript>
+    <div style="text-align:center;padding:60px;color:#8B949E">
+      JavaScript est requis. <a href="pages/login.html">Connexion →</a>
+    </div>
+  </noscript>
+</body>
+</html>

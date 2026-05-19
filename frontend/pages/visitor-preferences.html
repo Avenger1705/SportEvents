@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Préférences visiteur – Sport Events</title>
+  <meta name="description" content="Choisissez les sports que vous aimez suivre en tant que visiteur.">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .selected-count {
+      font-size: 13px;
+      color: var(--text-2);
+      margin-bottom: 10px;
+    }
+    .selected-count strong { color: var(--blue); }
+    .section-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper" style="padding-top:40px;padding-bottom:80px;">
+    <div class="wide-card">
+      <div class="auth-logo">
+        <span class="icon">👁️</span>
+        <h1>Profil Visiteur</h1>
+        <p>Découvrez les événements qui vous correspondent</p>
+      </div>
+
+      <div id="alertZone"></div>
+
+      <div class="divider">Vos Sports Favoris</div>
+      <p class="text-sm text-muted mb-16" style="text-align: center;">
+        Sélectionnez au moins un sport pour personnaliser votre fil.
+      </p>
+
+      <div class="selected-count" id="countLabel" style="text-align: center; margin-bottom: 20px;">
+        <span style="background: var(--blue-subtle); padding: 4px 12px; border-radius: 100px; border: 1px solid rgba(31,107,255,0.2);">
+          <strong>0</strong> sélectionné(s)
+        </span>
+      </div>
+
+      <div class="sport-chips" id="sportChips"></div>
+
+      <button id="btnSave" class="btn btn-primary mt-24" disabled>
+        Valider et accéder au Dashboard →
+      </button>
+
+      <div class="link-row">
+        <a href="role-selection.html" style="color: var(--text-2);">← Revenir au choix du rôle</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Auth.requireAuth();
+
+    const chipsEl   = document.getElementById("sportChips");
+    const btnSave   = document.getElementById("btnSave");
+    const alertZone = document.getElementById("alertZone");
+    const countLbl  = document.getElementById("countLabel");
+
+    const selected = new Set();
+
+    // Build chips
+    SPORTS_LIST.forEach(sport => {
+      const chip = document.createElement("div");
+      chip.className = "sport-chip";
+      chip.textContent = sport;
+      chip.addEventListener("click", () => {
+        if (selected.has(sport)) {
+          selected.delete(sport);
+          chip.classList.remove("selected");
+        } else {
+          selected.add(sport);
+          chip.classList.add("selected");
+        }
+        countLbl.innerHTML = `<strong>${selected.size}</strong> sport(s) sélectionné(s)`;
+        btnSave.disabled = selected.size === 0;
+      });
+      chipsEl.appendChild(chip);
+    });
+
+    btnSave.addEventListener("click", async () => {
+      alertZone.innerHTML = "";
+      setButtonLoading(btnSave, true, "Enregistrer et continuer →");
+
+      try {
+        await API.saveVisitorPreferences([...selected]);
+        showToast("✅ Préférences sauvegardées !", "success");
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 600);
+      } catch (err) {
+        alertZone.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+        setButtonLoading(btnSave, false, "Enregistrer et continuer →");
+      }
+    });
+  </script>
+</body>
+</html>

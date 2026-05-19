@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Équipes – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .admin-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+    .admin-nav-btn{padding:14px 28px;border-radius:var(--r-md);font-size:14px;font-weight:700;font-family:inherit;border:1px solid var(--glass-border);background:var(--glass-bg);backdrop-filter:var(--backdrop);color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;text-decoration:none}
+    .admin-nav-btn:hover{border-color:var(--blue);background:var(--blue-subtle);transform:translateY(-2px)}
+    .admin-nav-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 16px var(--blue-glow)}
+    .teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;margin-bottom:24px}
+    .team-card{background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:24px;transition:all .3s;position:relative;overflow:hidden}
+    .team-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--blue),var(--accent-1));opacity:0;transition:opacity .3s}
+    .team-card:hover{border-color:rgba(31,107,255,.3);transform:translateY(-4px);box-shadow:var(--shadow-glow)}
+    .team-card:hover::before{opacity:1}
+    .team-card h4{font-size:18px;font-weight:800;margin-bottom:4px}
+    .team-card .team-sport{font-size:12px;color:var(--blue-hover);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+    .team-card .team-members{font-size:13px;color:var(--text-2);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+    .team-card .team-actions{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--border)}
+    .btn-sm2{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:none;transition:all .2s}
+    .btn-edit{background:rgba(31,107,255,.12);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3)}
+    .btn-edit:hover{background:rgba(31,107,255,.22);transform:translateY(-1px)}
+    .btn-del{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25)}
+    .btn-del:hover{background:rgba(239,68,68,.2);transform:translateY(-1px)}
+    .member-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-3);border-radius:10px;margin-bottom:6px;font-size:13px;transition:all .2s;border:1px solid transparent}
+    .member-row:hover{border-color:rgba(31,107,255,.15);background:rgba(27,34,49,.9)}
+    .member-row .member-name{font-weight:600;color:var(--text)}
+    .member-row .member-email{color:var(--text-3);font-size:12px}
+    .member-row .member-pos{color:var(--blue-hover);font-size:11px;font-weight:700;margin-left:auto;background:var(--blue-subtle);padding:2px 10px;border-radius:100px;border:1px solid rgba(31,107,255,.2)}
+    .remove-member{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;transition:all .2s}
+    .remove-member:hover{background:rgba(239,68,68,.1);transform:scale(1.1)}
+    .player-count-info{background:var(--blue-subtle);border:1px solid rgba(31,107,255,.3);border-radius:10px;padding:10px 16px;font-size:13px;color:var(--blue-hover);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+    /* ── Autocomplete ── */
+    .autocomplete-wrapper{position:relative}
+    .autocomplete-dropdown{display:none;position:absolute;z-index:9999;background:var(--bg-2);border:1px solid rgba(31,107,255,.25);border-radius:10px;box-shadow:0 12px 36px rgba(0,0,0,.6);max-height:220px;overflow-y:auto;margin-top:4px}
+    .autocomplete-dropdown::-webkit-scrollbar{width:4px}
+    .autocomplete-dropdown::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+    .autocomplete-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .15s;border-bottom:1px solid rgba(255,255,255,.04)}
+    .autocomplete-item:last-child{border-bottom:none}
+    .autocomplete-item:hover{background:var(--blue-subtle)}
+    .ac-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border);flex-shrink:0}
+    .ac-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+    .ac-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ac-email{font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ac-sport{font-size:10px;color:var(--blue-hover);font-weight:600;margin-left:auto;flex-shrink:0}
+    .ac-highlight{background:rgba(31,107,255,.25);color:var(--blue-hover);border-radius:2px;padding:0 1px}
+    .ac-no-results{padding:12px 14px;font-size:12px;color:var(--text-3);text-align:center}
+
+    /* ── Member Entry Row ── */
+    .member-entry{display:grid;grid-template-columns:1.2fr 1fr 1fr 60px auto;gap:8px;margin-bottom:8px;align-items:start}
+    .member-entry input,.member-entry select{padding:10px 12px;background:var(--bg-3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:all .25s}
+    .member-entry input:focus,.member-entry select:focus{border-color:var(--blue-hover);background:var(--bg-2);box-shadow:0 0 0 3px var(--blue-glow)}
+    .member-entry input::placeholder{color:var(--text-3);opacity:.6}
+    .member-entry select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238B949E' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+
+    /* ── Section header ── */
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+    .section-header h2{font-size:24px;font-weight:800;display:flex;align-items:center;gap:10px}
+    .team-count-badge{font-size:12px;font-weight:700;background:var(--blue-subtle);color:var(--blue-hover);border:1px solid rgba(31,107,255,.25);border-radius:100px;padding:4px 14px}
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="admin-toggle-container">
+       <a href="dashboard.html" class="admin-switch">🏠 Mode Utilisateur</a>
+       <a href="admin-dashboard.html" class="admin-switch active">⚙️ Mode Admin</a>
+    </div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--blue)">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+  <main class="dashboard-layout">
+    <div class="admin-nav">
+      <a href="admin-dashboard.html" class="admin-nav-btn">📊 Statistiques</a>
+      <a href="admin-teams.html" class="admin-nav-btn active">👥 Équipes</a>
+      <a href="admin-tournaments.html" class="admin-nav-btn">🏆 Tournois</a>
+      <a href="admin-users.html" class="admin-nav-btn">👤 Utilisateurs</a>
+    </div>
+
+    <div class="section-header">
+      <h2>👥 Gestion des Équipes <span class="team-count-badge" id="teamCountBadge">0</span></h2>
+      <button class="btn btn-primary" id="btnCreate" style="width:auto;padding:12px 28px">＋ Créer une équipe</button>
+    </div>
+
+    <div class="teams-grid" id="teamsGrid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-2)">
+        <div style="width:44px;height:44px;border:3px solid rgba(31,107,255,.2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div>
+        Chargement...
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="teamModal">
+      <div class="modal-box" style="max-width:880px;position:relative;max-height:92vh;overflow-y:auto">
+        <button class="modal-close" id="modalClose" style="position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--glass-hover);border:1px solid var(--border);color:var(--text-2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:10">✕</button>
+        <div class="modal-title" id="modalTitle">Créer une équipe</div>
+        <div id="modalAlert"></div>
+
+        <div class="form-group">
+          <label for="teamSport">Sport *</label>
+          <select id="teamSport"><option value="">— Choisir un sport —</option></select>
+        </div>
+        <div class="player-count-info" id="playerCountInfo" style="display:none">
+          <span>ℹ️</span> <span id="playerCountText"></span>
+        </div>
+        <div class="form-group">
+          <label for="teamName">Nom de l'équipe *</label>
+          <input id="teamName" type="text" placeholder="Ex: Lions FC">
+        </div>
+
+        <div id="membersSection">
+          <label style="font-size:13px;font-weight:600;color:var(--text-2);display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            Joueurs
+            <span style="font-size:11px;color:var(--text-3);font-weight:400">— Tapez un nom pour rechercher dans la base</span>
+          </label>
+          <div id="membersList"></div>
+          <button type="button" class="btn btn-ghost" id="btnAddMember" style="width:auto;margin-top:8px;padding:8px 16px;font-size:13px">＋ Ajouter un joueur</button>
+        </div>
+
+        <button class="btn btn-primary" id="btnSubmitTeam" style="margin-top:20px">Créer l'équipe</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    Auth.requireAuth();
+    if (Auth.getRole() !== "admin") window.location.href = "dashboard.html";
+    document.getElementById("navUsername").textContent = Auth.getUsername();
+    API.getMe().then(u => { document.getElementById("navProfileImg").src = getProfileImageUrl(u.profile_image); }).catch(() => {});
+    document.getElementById("btnLogout").addEventListener("click", () => Auth.logout());
+
+    let sportsConfig = {};
+    let editingTeamId = null;
+    let maxPlayers = 0;
+    let allPlayers = [];
+    const modal = document.getElementById("teamModal");
+    const sportSelect = document.getElementById("teamSport");
+
+    async function init() {
+      try {
+        sportsConfig = await API.getSportsConfig();
+        sportSelect.innerHTML = '<option value="">— Choisir un sport —</option>';
+        // Include ALL sports (team + solo) so positions work for all
+        Object.keys(sportsConfig.team_sizes).forEach(s => {
+          const size = sportsConfig.team_sizes[s];
+          sportSelect.innerHTML += `<option value="${s}">${s} (${size} joueur${size > 1 ? 's' : ''})</option>`;
+        });
+      } catch(e) { console.error(e); }
+
+      // Load all players for autocomplete
+      try { allPlayers = await API.getPlayers(); } catch(e) { console.error(e); }
+
+      loadTeams();
+    }
+
+    // ── Sport change → update player count + position dropdowns ──
+    sportSelect.addEventListener("change", () => {
+      const sport = sportSelect.value;
+      const info = document.getElementById("playerCountInfo");
+      if (sport && sportsConfig.team_sizes) {
+        maxPlayers = sportsConfig.team_sizes[sport] || 1;
+        info.style.display = "flex";
+        document.getElementById("playerCountText").textContent = `Ce sport nécessite ${maxPlayers} joueur${maxPlayers > 1 ? 's' : ''} par équipe`;
+        updateMemberSlots();
+        updatePositionDropdowns();
+      } else {
+        info.style.display = "none";
+      }
+    });
+
+    function updateMemberSlots() {
+      const list = document.getElementById("membersList");
+      const current = list.querySelectorAll(".member-entry").length;
+      if (current < maxPlayers) {
+        for (let i = current; i < maxPlayers; i++) addMemberRow();
+      }
+    }
+
+    // ── Update all position dropdowns when sport changes ──
+    function updatePositionDropdowns() {
+      const sport = sportSelect.value;
+      const positions = (sportsConfig.positions && sportsConfig.positions[sport]) || [];
+      document.querySelectorAll('.m-pos').forEach(sel => {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">— Poste —</option>';
+        positions.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          if (p === currentVal) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    // ── Fuzzy match helper ──
+    function fuzzyMatch(text, query) {
+      if (!text || !query) return false;
+      return text.toLowerCase().includes(query.toLowerCase());
+    }
+
+    function highlightMatch(text, query) {
+      if (!text || !query) return text || '';
+      const idx = text.toLowerCase().indexOf(query.toLowerCase());
+      if (idx === -1) return text;
+      return text.substring(0, idx) + '<span class="ac-highlight">' + text.substring(idx, idx + query.length) + '</span>' + text.substring(idx + query.length);
+    }
+
+    // ── Add a member row with autocomplete + position dropdown ──
+    function addMemberRow(name="", email="", pos="", num="") {
+      const list = document.getElementById("membersList");
+      const div = document.createElement("div");
+      div.className = "member-entry";
+
+      // Build position options
+      const sport = sportSelect.value;
+      const positions = (sportsConfig.positions && sportsConfig.positions[sport]) || [];
+      let posOptions = '<option value="">— Poste —</option>';
+      positions.forEach(p => {
+        posOptions += `<option value="${p}" ${p === pos ? 'selected' : ''}>${p}</option>`;
+      });
+
+      div.innerHTML = `
+        <div class="autocomplete-wrapper">
+          <input type="text" placeholder="🔍 Nom du joueur" value="${name}" class="m-name" autocomplete="off">
+        </div>
+        <input type="email" placeholder="📧 Email" value="${email}" class="m-email">
+        <select class="m-pos">${posOptions}</select>
+        <input type="number" placeholder="N°" value="${num}" class="m-num" style="width:60px" min="0" max="99">
+        <button type="button" class="remove-member" title="Retirer">✕</button>`;
+
+      // Setup autocomplete
+      const nameInput = div.querySelector('.m-name');
+      const emailInput = div.querySelector('.m-email');
+      const removeBtn = div.querySelector('.remove-member');
+
+      // Create dropdown directly on <body> – completely outside any transformed ancestor
+      const dropdown = document.createElement('div');
+      dropdown.className = 'autocomplete-dropdown';
+      document.body.appendChild(dropdown);
+
+      function positionDropdown() {
+        const rect = nameInput.getBoundingClientRect();
+        // Use absolute positioning relative to the document (scrollY included)
+        dropdown.style.position = 'absolute';
+        dropdown.style.top   = (rect.bottom + window.scrollY + 4) + 'px';
+        dropdown.style.left  = (rect.left  + window.scrollX) + 'px';
+        dropdown.style.width = rect.width + 'px';
+      }
+
+      function hideDropdown() { dropdown.style.display = 'none'; }
+      function removeDropdown() { dropdown.remove(); }
+
+      removeBtn.addEventListener('click', () => {
+        div.style.opacity = '0';
+        div.style.transform = 'translateX(20px)';
+        div.style.transition = 'all .25s ease';
+        setTimeout(() => { div.remove(); removeDropdown(); }, 250);
+      });
+
+      let debounceTimer;
+      nameInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const query = nameInput.value.trim();
+          if (query.length < 2) { hideDropdown(); return; }
+
+          const matches = allPlayers.filter(p => {
+            const fullName = `${p.prenom || ''} ${p.nom || ''} ${p.username || ''} ${p.email || ''}`;
+            return fuzzyMatch(fullName, query);
+          }).slice(0, 6);
+
+          if (!matches.length) {
+            dropdown.innerHTML = '<div class="ac-no-results">Aucun joueur trouvé pour "' + query + '"</div>';
+            positionDropdown();
+            dropdown.style.display = 'block';
+            return;
+          }
+
+          dropdown.innerHTML = matches.map(p => {
+            const displayName = `${p.prenom || ''} ${p.nom || ''}`.trim() || p.username;
+            const avatarUrl = getProfileImageUrl(p.profile_image);
+            return `<div class="autocomplete-item" data-email="${p.email || ''}" data-name="${displayName}" data-id="${p.id}">
+              <img class="ac-avatar" src="${avatarUrl}" alt="" onerror="this.src='${DEFAULT_AVATAR}'">
+              <div class="ac-info">
+                <span class="ac-name">${highlightMatch(displayName, query)}</span>
+                <span class="ac-email">${highlightMatch(p.email || '', query)}</span>
+              </div>
+              ${p.practice_sport ? `<span class="ac-sport">${p.practice_sport}</span>` : ''}
+            </div>`;
+          }).join('');
+          positionDropdown();
+          dropdown.style.display = 'block';
+
+          dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('mousedown', (e) => {
+              e.preventDefault();
+              nameInput.value = item.dataset.name;
+              emailInput.value = item.dataset.email;
+              hideDropdown();
+              nameInput.style.borderColor = 'var(--green)';
+              nameInput.style.boxShadow = '0 0 0 3px rgba(16,185,129,.2)';
+              setTimeout(() => { nameInput.style.borderColor = ''; nameInput.style.boxShadow = ''; }, 800);
+            });
+          });
+        }, 150);
+      });
+
+      nameInput.addEventListener('blur', () => setTimeout(hideDropdown, 200));
+      nameInput.addEventListener('focus', () => {
+        if (nameInput.value.trim().length >= 2) nameInput.dispatchEvent(new Event('input'));
+      });
+
+      // Reposition when modal scrolls
+      document.querySelector('.modal-box').addEventListener('scroll', () => {
+        if (dropdown.style.display === 'block') positionDropdown();
+      });
+
+      list.appendChild(div);
+
+      // Animate entry
+      div.style.opacity = '0';
+      div.style.transform = 'translateY(8px)';
+      requestAnimationFrame(() => {
+        div.style.transition = 'all .3s ease';
+        div.style.opacity = '1';
+        div.style.transform = 'translateY(0)';
+      });
+    }
+
+    document.getElementById("btnAddMember").addEventListener("click", () => addMemberRow());
+
+    function openCreateModal() {
+      editingTeamId = null;
+      document.getElementById("modalTitle").textContent = "Créer une équipe";
+      document.getElementById("btnSubmitTeam").textContent = "Créer l'équipe";
+      document.getElementById("teamName").value = "";
+      sportSelect.value = "";
+      document.getElementById("membersList").innerHTML = "";
+      document.getElementById("playerCountInfo").style.display = "none";
+      document.getElementById("modalAlert").innerHTML = "";
+      modal.classList.add("open");
+    }
+
+    function openEditModal(team) {
+      editingTeamId = team.id;
+      document.getElementById("modalTitle").textContent = "Modifier l'équipe";
+      document.getElementById("btnSubmitTeam").textContent = "Enregistrer";
+      document.getElementById("teamName").value = team.name;
+      sportSelect.value = team.sport;
+      sportSelect.dispatchEvent(new Event("change"));
+      document.getElementById("membersList").innerHTML = "";
+      team.members.forEach(m => addMemberRow(m.player_name, m.player_email || "", m.position || "", m.jersey_number || ""));
+      document.getElementById("modalAlert").innerHTML = "";
+      modal.classList.add("open");
+    }
+
+    document.getElementById("btnCreate").addEventListener("click", openCreateModal);
+
+    function closeModal() {
+      modal.classList.remove("open");
+      // Hide all body-level autocomplete dropdowns
+      document.querySelectorAll('body > .autocomplete-dropdown').forEach(d => d.style.display = 'none');
+    }
+
+    document.getElementById("modalClose").addEventListener("click", closeModal);
+    modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+
+    document.getElementById("btnSubmitTeam").addEventListener("click", async () => {
+      const name = document.getElementById("teamName").value.trim();
+      const sport = sportSelect.value;
+      if (!name || !sport) {
+        document.getElementById("modalAlert").innerHTML = '<div class="alert alert-error">Nom et sport requis</div>';
+        return;
+      }
+
+      const entries = document.querySelectorAll(".member-entry");
+      const members = [];
+      entries.forEach(e => {
+        const n = e.querySelector(".m-name").value.trim();
+        if (n) {
+          members.push({
+            player_name: n,
+            player_email: e.querySelector(".m-email").value.trim() || null,
+            position: e.querySelector(".m-pos").value || null,
+            jersey_number: parseInt(e.querySelector(".m-num").value) || null,
+          });
+        }
+      });
+
+      const btn = document.getElementById("btnSubmitTeam");
+      const orig = btn.textContent;
+      setButtonLoading(btn, true, orig);
+
+      try {
+        if (editingTeamId) {
+          await API.updateTeam(editingTeamId, { name, sport, members });
+          showToast("Équipe modifiée ✓", "success");
+        } else {
+          await API.createTeam({ name, sport, members });
+          showToast("Équipe créée ✓", "success");
+        }
+        modal.classList.remove("open");
+        loadTeams();
+      } catch (err) {
+        document.getElementById("modalAlert").innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      } finally { setButtonLoading(btn, false, orig); }
+    });
+
+    async function loadTeams() {
+      const grid = document.getElementById("teamsGrid");
+      try {
+        const teams = await API.getTeams();
+        document.getElementById("teamCountBadge").textContent = teams.length;
+        if (!teams.length) {
+          grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text-2)"><span style="font-size:56px;display:block;margin-bottom:16px">👥</span><h3 style="color:var(--text);font-size:18px;margin-bottom:6px">Aucune équipe</h3><p style="font-size:14px">Créez votre première équipe pour commencer</p></div>';
+          return;
+        }
+        grid.innerHTML = "";
+        teams.forEach(t => {
+          const card = document.createElement("div");
+          card.className = "team-card";
+          card.innerHTML = `
+            <h4>${t.name}</h4>
+            <div class="team-sport">${sportEmoji(t.sport)} ${t.sport}</div>
+            <div class="team-members">👤 ${t.members.length} joueur${t.members.length > 1 ? 's' : ''}</div>
+            ${t.members.slice(0,4).map(m => `<div class="member-row"><span class="member-name">${m.player_name}</span>${m.position ? `<span class="member-pos">${m.position}</span>` : ""}${m.jersey_number ? `<span style="color:var(--text-3);font-size:11px;font-weight:700">#${m.jersey_number}</span>` : ""}</div>`).join("")}
+            ${t.members.length > 4 ? `<div style="font-size:12px;color:var(--text-3);margin-top:6px;padding:4px 0">+${t.members.length-4} autres joueurs</div>` : ""}
+            <div class="team-actions">
+              <button class="btn-sm2 btn-edit" data-id="${t.id}">✏️ Modifier</button>
+              <button class="btn-sm2 btn-del" data-id="${t.id}">🗑️ Supprimer</button>
+            </div>`;
+          card.querySelector(".btn-edit").addEventListener("click", () => openEditModal(t));
+          card.querySelector(".btn-del").addEventListener("click", async () => {
+            if (!confirm(`Supprimer l'équipe "${t.name}" ?`)) return;
+            try { await API.deleteTeam(t.id); showToast("Équipe supprimée", "success"); loadTeams(); }
+            catch(err) { showToast(err.message, "error"); }
+          });
+          grid.appendChild(card);
+        });
+      } catch (err) { grid.innerHTML = `<div style="grid-column:1/-1;color:var(--red)">${err.message}</div>`; }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournois – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    /* ── Tournament card ── */
+    .tourney-card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--backdrop);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-lg);
+      padding: 28px;
+      margin-bottom: 36px;
+      transition: border-color .3s;
+    }
+    .tourney-card:hover { border-color: rgba(31,107,255,.35); }
+    .tourney-header { display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; }
+    .tourney-emoji { font-size:40px; line-height:1; }
+    .tourney-title { font-size:22px; font-weight:900; margin-bottom:4px; }
+    .tourney-sport { font-size:12px; font-weight:700; letter-spacing:.8px; text-transform:uppercase; color:var(--blue-hover); margin-bottom:8px; }
+    .tourney-meta { display:flex; flex-wrap:wrap; gap:14px; font-size:13px; color:var(--text-2); }
+    .tourney-meta span { display:flex; align-items:center; gap:5px; }
+    .status-badge {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:4px 12px; border-radius:100px;
+      font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+    }
+    .status-a_venir  { background:var(--blue-subtle);           color:var(--blue-hover); }
+    .status-en_cours { background:rgba(245,158,11,.12);         color:#F59E0B; }
+    .status-termine  { background:rgba(46,160,67,.12);          color:#56D364; }
+
+    /* ── Teams row ── */
+    .teams-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+    .team-pill {
+      padding:5px 14px; border-radius:100px;
+      background:var(--bg-3); border:1px solid var(--border);
+      font-size:12px; font-weight:600; cursor:pointer; transition:all .2s;
+    }
+    .team-pill:hover { border-color:var(--blue); color:var(--blue-hover); }
+
+    /* ── BRACKET ── */
+    .bracket-section { margin-top:20px; }
+    .bracket-scroll { overflow-x:auto; padding-bottom:16px; }
+    .bracket-scroll::-webkit-scrollbar { height:5px; }
+    .bracket-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+    .bracket-grid {
+      display:flex;
+      gap:0;
+      min-width:max-content;
+      padding:20px 0;
+      position:relative;
+    }
+
+    /* Each round column */
+    .b-round {
+      display:flex;
+      flex-direction:column;
+      min-width:220px;
+      position:relative;
+    }
+    .b-round-label {
+      font-size:11px; font-weight:800;
+      text-transform:uppercase; letter-spacing:1px;
+      color:var(--text-3);
+      text-align:center;
+      padding:8px 0 16px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:0;
+    }
+    .b-round-matches {
+      display:flex;
+      flex-direction:column;
+      justify-content:space-around;
+      flex:1;
+      padding:12px 0;
+      position:relative;
+    }
+
+    /* Connector column between rounds */
+    .b-connector {
+      width:40px;
+      min-width:40px;
+      position:relative;
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Individual match card */
+    .b-match {
+      position:relative;
+      margin:8px 12px;
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid var(--border);
+      background:var(--bg-3);
+      box-shadow:0 2px 12px rgba(0,0,0,.25);
+      transition:all .25s;
+      cursor:default;
+    }
+    .b-match:hover { border-color:rgba(31,107,255,.4); box-shadow:0 4px 24px rgba(31,107,255,.15); }
+    .b-match.final-match {
+      border-color:rgba(245,158,11,.4);
+      box-shadow:0 0 0 1px rgba(245,158,11,.2), 0 4px 24px rgba(245,158,11,.15);
+    }
+
+    /* Team row inside match */
+    .b-team {
+      display:flex; align-items:center;
+      padding:10px 14px;
+      gap:10px;
+      font-size:13px;
+      font-weight:600;
+      transition:background .2s;
+      border-bottom:1px solid rgba(255,255,255,.04);
+      min-height:42px;
+    }
+    .b-team:last-of-type { border-bottom:none; }
+    .b-team.winner {
+      background:rgba(46,160,67,.1);
+      color:#56D364;
+    }
+    .b-team.loser { color:var(--text-3); }
+    .b-team.tbd   { color:var(--text-3); font-style:italic; font-weight:400; }
+
+    .b-team-name { flex:1; }
+    .b-score {
+      font-size:16px; font-weight:900;
+      min-width:24px; text-align:center;
+    }
+    .b-team.winner .b-score { color:#56D364; }
+    .b-team.loser  .b-score { color:var(--text-3); }
+    .winner-crown { font-size:12px; }
+
+    /* Match footer: date + book button */
+    .b-match-footer {
+      padding:8px 14px;
+      border-top:1px solid rgba(255,255,255,.05);
+      display:flex; align-items:center; justify-content:space-between;
+      background:rgba(0,0,0,.15);
+    }
+    .b-match-date { font-size:10px; color:var(--text-3); }
+    .b-match-status {
+      font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.6px;
+      padding:2px 8px; border-radius:4px;
+    }
+    .b-match-status.a_venir  { background:var(--blue-subtle);        color:var(--blue-hover); }
+    .b-match-status.en_cours { background:rgba(245,158,11,.15);       color:#F59E0B; }
+    .b-match-status.termine  { background:rgba(46,160,67,.12);        color:#56D364; }
+
+    .btn-book {
+      background:linear-gradient(135deg,var(--blue),var(--blue-dark,#1040cc));
+      color:#fff; border:none;
+      padding:4px 12px; border-radius:8px;
+      font-size:11px; font-weight:700; cursor:pointer;
+      font-family:inherit; transition:all .2s;
+    }
+    .btn-book:hover { box-shadow:0 4px 14px var(--blue-glow); transform:translateY(-1px); }
+
+    /* SVG connector canvas */
+    .bracket-svg {
+      position:absolute;
+      top:0; left:0;
+      width:100%; height:100%;
+      pointer-events:none;
+      overflow:visible;
+    }
+
+    /* ── Team modal ── */
+    .player-row {
+      display:flex; align-items:center; gap:10px;
+      padding:10px 0; border-bottom:1px solid rgba(255,255,255,.05);
+      font-size:13px;
+    }
+    .player-row:last-child { border:none; }
+    .player-avatar {
+      width:34px; height:34px; border-radius:50%;
+      object-fit:cover; border:1px solid var(--border);
+    }
+    .player-name { font-weight:700; flex:1; }
+    .player-pos  { font-size:11px; font-weight:700; color:var(--blue-hover); }
+    .player-num  { font-size:11px; color:var(--text-3); }
+
+    /* ── Empty / loading ── */
+    .bracket-empty {
+      text-align:center; padding:60px 24px; color:var(--text-2);
+    }
+    .bracket-empty .big-icon { font-size:48px; display:block; margin-bottom:12px; }
+
+    /* ── Match Comments ── */
+    .match-comments-panel {
+      border-top: 1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.18);
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .35s ease;
+    }
+    .match-comments-panel.open { max-height: 600px; }
+    .comments-inner { padding: 12px 14px; }
+    .comment-item {
+      display: flex; gap: 9px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      animation: fadeIn .2s ease;
+    }
+    .comment-item:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+    .comment-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      object-fit: cover; border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-meta {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 3px;
+    }
+    .comment-username { font-size: 11px; font-weight: 700; color: var(--blue-hover); }
+    .comment-time    { font-size: 10px; color: var(--text-3); }
+    .comment-text    { font-size: 12px; color: var(--text-2); line-height: 1.5; word-break: break-word; }
+    .btn-del-comment {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 13px; padding: 0 2px;
+      transition: color .15s;
+      flex-shrink: 0;
+    }
+    .btn-del-comment:hover { color: #f87171; }
+    .comment-form {
+      display: flex; gap: 7px; margin-top: 10px;
+    }
+    .comment-input {
+      flex: 1;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 7px 10px;
+      resize: none;
+      outline: none;
+      transition: border-color .2s;
+      min-height: 34px; max-height: 90px;
+    }
+    .comment-input:focus { border-color: var(--blue); }
+    .btn-comment-send {
+      background: var(--blue);
+      color: #fff; border: none;
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 12px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all .2s; white-space: nowrap;
+    }
+    .btn-comment-send:hover { box-shadow: 0 4px 14px var(--blue-glow); transform: translateY(-1px); }
+    .btn-comment-toggle {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 11px; font-weight: 700;
+      padding: 0; font-family: inherit;
+      display: flex; align-items: center; gap: 4px;
+      transition: color .2s;
+    }
+    .btn-comment-toggle:hover { color: var(--blue-hover); }
+    .comment-count-badge {
+      background: var(--blue-subtle);
+      color: var(--blue-hover);
+      border-radius: 100px;
+      padding: 1px 6px;
+      font-size: 10px; font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--blue);display:none;">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+      <a href="dashboard.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">← Tableau de bord</a>
+    </div>
+  </nav>
+
+  <main class="dashboard-layout">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div class="section-title" style="margin:0;">🏆 Tournois</div>
+      <span id="countBadge" class="badge badge-blue"></span>
+    </div>
+
+    <!-- Search and Filter -->
+    <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+      <div style="position:relative;flex:1;min-width:260px;">
+        <input type="search" id="searchInput" class="search-bar" style="width:100%;padding:14px 20px;padding-right:40px;background:var(--bg-3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:all .25s;" placeholder="🔍 Rechercher un tournoi par nom ou lieu...">
+        <button id="searchClear" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:none;color:var(--text-3);width:24px;height:24px;border-radius:50%;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:12px;transition:all .2s;">✕</button>
+      </div>
+      <select id="sportFilterSelect" style="padding:14px 20px;background:var(--bg-3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-family:inherit;outline:none;cursor:pointer;min-width:200px;">
+        <option value="all">🏆 Tous les sports</option>
+      </select>
+    </div>
+
+    <div id="tournamentsList">
+      <div class="bracket-empty"><span class="big-icon">⏳</span><p>Chargement des tournois…</p></div>
+    </div>
+  </main>
+
+  <!-- Team modal -->
+  <div class="modal-overlay" id="teamModal">
+    <div class="modal-box" style="max-width:520px;position:relative;max-height:90vh;overflow-y:auto;">
+      <button onclick="document.getElementById('teamModal').classList.remove('open')"
+        style="position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;
+               background:var(--glass-hover);border:1px solid var(--border);color:var(--text-2);
+               font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+      <div class="modal-title" id="teamModalTitle">Équipe</div>
+      <div id="teamModalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    Auth.requireAuth();
+
+    // ── Nav ──────────────────────────────────────────────────────────────────
+    document.getElementById("navUsername").textContent = Auth.getUsername();
+    API.getMe().then(u => {
+      const img = document.getElementById("navProfileImg");
+      img.src = getProfileImageUrl(u.profile_image);
+      img.style.display = "block";
+    }).catch(() => {});
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function fmtDate(d) {
+      if (!d) return null;
+      return new Date(d).toLocaleDateString("fr-FR", { day:"numeric", month:"short", year:"numeric" });
+    }
+    function fmtDateTime(d) {
+      if (!d) return null;
+      return new Date(d).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+    }
+    function getRoundName(r, total) {
+      if (r === total)     return "Finale";
+      if (r === total - 1) return "Demi-finales";
+      if (r === total - 2) return "Quarts de finale";
+      return `Tour ${r}`;
+    }
+
+    // ── Team modal ────────────────────────────────────────────────────────────
+    async function showTeam(teamId) {
+      try {
+        const team = await API.getTeam(teamId);
+        document.getElementById("teamModalTitle").textContent = `🏅 ${team.name}`;
+        const body = document.getElementById("teamModalBody");
+        body.innerHTML = `<div style="font-size:12px;color:var(--blue-hover);font-weight:700;text-transform:uppercase;margin-bottom:14px;">${sportEmoji(team.sport)} ${team.sport}</div>`;
+        if (!team.members.length) {
+          body.innerHTML += '<p style="color:var(--text-3)">Aucun joueur enregistré.</p>';
+        } else {
+          team.members.forEach(m => {
+            const row = document.createElement("div");
+            row.className = "player-row";
+            row.innerHTML = `
+              <img class="player-avatar" src="${m.user_id ? getProfileImageUrl(null) : '/appphoto.png'}" alt="">
+              <span class="player-name">${m.player_name}</span>
+              ${m.position     ? `<span class="player-pos">${m.position}</span>` : ""}
+              ${m.jersey_number? `<span class="player-num">#${m.jersey_number}</span>` : ""}
+              ${m.user_id      ? `<a href="player-profile.html?id=${m.user_id}" style="font-size:11px;color:var(--blue-hover);text-decoration:none;font-weight:700;">Profil →</a>` : ""}
+            `;
+            body.appendChild(row);
+          });
+        }
+        document.getElementById("teamModal").classList.add("open");
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    // ── Book match ────────────────────────────────────────────────────────────
+    async function bookMatch(matchId) {
+      try {
+        const res = await API.createBooking(matchId);
+        showToast(`🎟️ ${res.message} – Vérifiez votre email pour le QR code !`, "success", 7000);
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    function getBookingStatus(m) {
+      const status = String(m.status || "").replace("MatchStatusEnum.", "");
+      if (status === "en_cours") return { open: false, label: "⚡ Match en cours",   cls: "status-en_cours" };
+      if (status === "termine")  return { open: false, label: "✅ Match terminé",    cls: "status-termine" };
+
+      if (!m.match_date) return { open: false, label: "📅 Date non planifiée", cls: "status-a_venir" };
+
+      const matchStart = new Date(m.match_date);
+      if (m.match_time) {
+        const t = m.match_time.trim().replace(/[Hh]/, ":");
+        const parts = t.split(":");
+        if (parts.length >= 2) {
+          matchStart.setHours(parseInt(parts[0]) || 0, parseInt(parts[1]) || 0, 0, 0);
+        }
+      }
+      const now   = new Date();
+      const diffMs = matchStart - now;
+      if (diffMs <= 0)         return { open: false, label: "Match passé",              cls: "status-termine" };
+      if (diffMs <= 3_600_000) return { open: false, label: "⏰ Réservations fermées", cls: "status-en_cours" };
+
+      const hours = Math.floor(diffMs / 3_600_000);
+      const mins  = Math.floor((diffMs % 3_600_000) / 60_000);
+      const deadline = hours > 0 ? `Ferme dans ${hours}h${mins < 10 ? "0"+mins : mins}` : `Ferme dans ${mins} min`;
+      return { open: true, label: deadline, cls: "status-a_venir" };
+    }
+
+    // ── Build bracket for one tournament ─────────────────────────────────────
+    function buildBracket(t) {
+      if (!t.matches || !t.matches.length) return null;
+
+      const totalRounds = Math.max(...t.matches.map(m => m.round_number));
+      const matchSize   = { w: 220, h: 110 }; // approx card size
+      const hGap = 40; // horizontal gap between rounds (connector width)
+
+      const container = document.createElement("div");
+      container.className = "bracket-scroll";
+
+      const grid = document.createElement("div");
+      grid.className = "bracket-grid";
+      container.appendChild(grid);
+
+      // Store DOM rects for SVG connectors (keyed by round+matchOrder)
+      const matchEls = {}; // key: `${round}_${order}` → DOM element
+
+      for (let r = 1; r <= totalRounds; r++) {
+        const roundMatches = t.matches.filter(m => m.round_number === r)
+          .sort((a,b) => a.match_order - b.match_order);
+
+        // Round column
+        const col = document.createElement("div");
+        col.className = "b-round";
+
+        const label = document.createElement("div");
+        label.className = "b-round-label";
+        label.textContent = getRoundName(r, totalRounds);
+        col.appendChild(label);
+
+        const matchCol = document.createElement("div");
+        matchCol.className = "b-round-matches";
+
+        roundMatches.forEach(m => {
+          const card = buildMatchCard(m, r === totalRounds);
+          matchCol.appendChild(card);
+          matchEls[`${r}_${m.match_order}`] = card;
+        });
+
+        col.appendChild(matchCol);
+        grid.appendChild(col);
+
+        // Connector column (not after last round)
+        if (r < totalRounds) {
+          const conn = document.createElement("div");
+          conn.className = "b-connector";
+          conn.style.cssText = "width:40px;min-width:40px;position:relative;";
+          grid.appendChild(conn);
+        }
+      }
+
+      // Draw SVG connectors after DOM is ready
+      requestAnimationFrame(() => drawConnectors(grid, t.matches, totalRounds, matchEls));
+
+      return container;
+    }
+
+    function buildMatchCard(m, isFinal) {
+      const card = document.createElement("div");
+      card.className = "b-match" + (isFinal ? " final-match" : "");
+      card.dataset.matchId = m.id;
+
+      const wId   = m.winner?.id ?? null;
+      const hasA  = !!m.team_a;
+      const hasB  = !!m.team_b;
+      const nameA = hasA ? m.team_a.name : "À déterminer";
+      const nameB = hasB ? m.team_b.name : "À déterminer";
+      const clsA  = !hasA ? "tbd" : (wId && m.team_a && wId===m.team_a.id) ? "winner" : (wId ? "loser" : "");
+      const clsB  = !hasB ? "tbd" : (wId && m.team_b && wId===m.team_b.id) ? "winner" : (wId ? "loser" : "");
+      const sA    = m.score_a !== null && m.score_a !== undefined ? m.score_a : "–";
+      const sB    = m.score_b !== null && m.score_b !== undefined ? m.score_b : "–";
+
+      const statusMap = { a_venir:"À venir", en_cours:"En cours", termine:"Terminé" };
+      const status = String(m.status).replace("MatchStatusEnum.","");
+
+      card.innerHTML = `
+        <div class="b-team ${clsA}" ${hasA ? `onclick="showTeam(${m.team_a.id})" style="cursor:pointer"` : ""}>
+          ${clsA==="winner" ? '<span class="winner-crown">👑</span>' : '<span style="font-size:12px;opacity:.3">○</span>'}
+          <span class="b-team-name">${nameA}</span>
+          <span class="b-score">${sA}</span>
+        </div>
+        <div class="b-team ${clsB}" ${hasB ? `onclick="showTeam(${m.team_b.id})" style="cursor:pointer"` : ""}>
+          ${clsB==="winner" ? '<span class="winner-crown">👑</span>' : '<span style="font-size:12px;opacity:.3">○</span>'}
+          <span class="b-team-name">${nameB}</span>
+          <span class="b-score">${sB}</span>
+        </div>
+        <div class="b-match-footer">
+          <span class="b-match-date">${fmtDateTime(m.match_date) || (m.match_time || "")}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="b-match-status ${status}">${statusMap[status] || status}</span>
+            ${hasA && hasB && status !== "termine" ? `<button class="btn-book" onclick="bookMatch(${m.id})">🎟️</button>` : ""}
+            <button class="btn-comment-toggle" id="cmtToggle_${m.id}" onclick="toggleComments(${m.id}, this)">
+              💬 <span class="comment-count-badge" id="cmtCount_${m.id}">…</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Append collapsible comment panel
+      card.appendChild(buildCommentPanel(m.id));
+
+      // Load comment count in background
+      API.getMatchComments(m.id).then(list => {
+        const badge = document.getElementById(`cmtCount_${m.id}`);
+        if (badge) badge.textContent = list.length;
+      }).catch(() => {});
+
+      return card;
+    }
+
+    function buildCommentPanel(matchId) {
+      const panel = document.createElement("div");
+      panel.className = "match-comments-panel";
+      panel.id = `cmtPanel_${matchId}`;
+      panel.innerHTML = `
+        <div class="comments-inner">
+          <div id="cmtList_${matchId}" style="max-height:260px;overflow-y:auto;">
+            <p style="color:var(--text-3);font-size:12px;text-align:center;padding:8px 0;">Chargement…</p>
+          </div>
+          <form class="comment-form" onsubmit="submitMatchComment(event, ${matchId})">
+            <textarea
+              id="cmtInput_${matchId}"
+              class="comment-input"
+              placeholder="Écrire un commentaire…"
+              rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitMatchComment(event,${matchId});}"
+            ></textarea>
+            <button type="submit" class="btn-comment-send">Envoyer</button>
+          </form>
+        </div>
+      `;
+      return panel;
+    }
+
+    async function toggleComments(matchId, btn) {
+      const panel = document.getElementById(`cmtPanel_${matchId}`);
+      if (!panel) return;
+      const isOpen = panel.classList.toggle("open");
+      if (isOpen) await loadMatchComments(matchId);
+    }
+
+    async function loadMatchComments(matchId) {
+      const list = document.getElementById(`cmtList_${matchId}`);
+      if (!list) return;
+      try {
+        const comments = await API.getMatchComments(matchId);
+        const badge = document.getElementById(`cmtCount_${matchId}`);
+        if (badge) badge.textContent = comments.length;
+
+        if (!comments.length) {
+          list.innerHTML = '<p style="color:var(--text-3);font-size:12px;text-align:center;padding:8px 0;">Aucun commentaire. Soyez le premier !</p>';
+          return;
+        }
+        const myId = Auth.getUserId();
+        const role = Auth.getRole();
+        const isAdmin = role === "admin";
+        list.innerHTML = comments.map(c => `
+          <div class="comment-item" id="cmtItem_${c.id}">
+            <img class="comment-avatar" src="${getProfileImageUrl(c.user.profile_image)}" alt="">
+            <div class="comment-body">
+              <div class="comment-meta">
+                <span class="comment-username">${c.user.username}</span>
+                <span class="comment-time">${fmtCommentDate(c.created_at)}</span>
+              </div>
+              <div class="comment-text">${escHtml(c.content)}</div>
+            </div>
+            ${(c.user.id === myId || isAdmin)
+              ? `<button class="btn-del-comment" title="Supprimer" onclick="deleteMatchComment(${c.id}, ${matchId})">🗑</button>`
+              : ""}
+          </div>
+        `).join("");
+      } catch(e) {
+        list.innerHTML = `<p style="color:var(--red);font-size:12px;">${e.message}</p>`;
+      }
+    }
+
+    async function submitMatchComment(event, matchId) {
+      if (event && event.preventDefault) event.preventDefault();
+      const input = document.getElementById(`cmtInput_${matchId}`);
+      if (!input) return;
+      const content = input.value.trim();
+      if (!content) return;
+      try {
+        await API.addMatchComment(matchId, content);
+        input.value = "";
+        await loadMatchComments(matchId);
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function deleteMatchComment(commentId, matchId) {
+      if (!confirm("Supprimer ce commentaire ?")) return;
+      try {
+        await API.deleteComment("match", commentId);
+        await loadMatchComments(matchId);
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    function fmtCommentDate(dt) {
+      if (!dt) return "";
+      return new Date(dt).toLocaleString("fr-FR", {
+        day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"
+      });
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+    }
+
+    // ── SVG bracket connector lines ───────────────────────────────────────────
+    function drawConnectors(grid, matches, totalRounds, matchEls) {
+      const gridRect = grid.getBoundingClientRect();
+
+      const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
+      svg.classList.add("bracket-svg");
+      svg.setAttribute("xmlns","http://www.w3.org/2000/svg");
+      grid.style.position = "relative";
+      grid.appendChild(svg);
+
+      for (let r = 1; r < totalRounds; r++) {
+        const currMatches = matches.filter(m => m.round_number === r)
+          .sort((a,b) => a.match_order - b.match_order);
+
+        currMatches.forEach((m, idx) => {
+          const nextOrder = Math.floor(idx / 2);
+          const nextMatchOrder = matches.filter(x => x.round_number === r+1)
+            .sort((a,b) => a.match_order - b.match_order)[nextOrder]?.match_order;
+          if (!nextMatchOrder) return;
+
+          const srcEl  = matchEls[`${r}_${m.match_order}`];
+          const dstEl  = matchEls[`${r+1}_${nextMatchOrder}`];
+          if (!srcEl || !dstEl) return;
+
+          const sRect = srcEl.getBoundingClientRect();
+          const dRect = dstEl.getBoundingClientRect();
+
+          // positions relative to grid
+          const x1 = sRect.right  - gridRect.left;
+          const y1 = sRect.top + sRect.height/2 - gridRect.top;
+          const x2 = dRect.left   - gridRect.left;
+          const y2 = dRect.top + dRect.height/2 - gridRect.top;
+          const mx = (x1 + x2) / 2;
+
+          // Color: winner line = green, else blue-gray
+          const hasWinner = !!m.winner;
+          const color = hasWinner ? "rgba(86,211,100,.55)" : "rgba(31,107,255,.25)";
+          const glow  = hasWinner ? "rgba(86,211,100,.15)" : "rgba(31,107,255,.08)";
+
+          // Draw connector path: right-angle bezier
+          const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+          const d = `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+          path.setAttribute("d", d);
+          path.setAttribute("fill","none");
+          path.setAttribute("stroke", color);
+          path.setAttribute("stroke-width","2");
+          path.setAttribute("stroke-dasharray", hasWinner ? "none" : "5,3");
+
+          // Glow duplicate
+          const pathGlow = document.createElementNS("http://www.w3.org/2000/svg","path");
+          pathGlow.setAttribute("d", d);
+          pathGlow.setAttribute("fill","none");
+          pathGlow.setAttribute("stroke", glow);
+          pathGlow.setAttribute("stroke-width","6");
+
+          svg.appendChild(pathGlow);
+          svg.appendChild(path);
+        });
+      }
+    }
+
+    // ── Global state ──
+    let ALL_TOURNAMENTS = [];
+    let SPORTS_LIST = [];
+    let activeSearch = "";
+    let activeFilter = "all";
+
+    // ── Search & Filter Logic ──
+    const searchInput = document.getElementById("searchInput");
+    const searchClear = document.getElementById("searchClear");
+    const sportFilterSelect = document.getElementById("sportFilterSelect");
+
+    searchInput.addEventListener("input", e => {
+      activeSearch = e.target.value.toLowerCase().trim();
+      searchClear.style.display = activeSearch.length > 0 ? "flex" : "none";
+      renderTournaments();
+    });
+
+    searchClear.addEventListener("click", () => {
+      searchInput.value = "";
+      activeSearch = "";
+      searchClear.style.display = "none";
+      renderTournaments();
+    });
+
+    sportFilterSelect.addEventListener("change", e => {
+      activeFilter = e.target.value;
+      renderTournaments();
+    });
+
+    function updateFilterChips() {
+      sportFilterSelect.innerHTML = `<option value="all">🏆 Tous les sports (${ALL_TOURNAMENTS.length})</option>`;
+      
+      const counts = {};
+      ALL_TOURNAMENTS.forEach(t => {
+        if (t.sport) counts[t.sport] = (counts[t.sport] || 0) + 1;
+      });
+
+      SPORTS_LIST.forEach(sport => {
+        const count = counts[sport] || 0;
+        if (count === 0 && activeFilter !== sport) return;
+
+        const opt = document.createElement("option");
+        opt.value = sport;
+        opt.textContent = `${sportEmoji(sport)} ${sport} (${count})`;
+        if (activeFilter === sport) opt.selected = true;
+        sportFilterSelect.appendChild(opt);
+      });
+    }
+
+    // ── Main load ─────────────────────────────────────────────────────────────
+    async function loadTournaments() {
+      const container = document.getElementById("tournamentsList");
+      try {
+        ALL_TOURNAMENTS = await API.getTournaments();
+        
+        // Extract unique sports
+        const sportsSet = new Set();
+        ALL_TOURNAMENTS.forEach(t => { if (t.sport) sportsSet.add(t.sport); });
+        SPORTS_LIST = Array.from(sportsSet).sort();
+
+        updateFilterChips();
+        renderTournaments();
+      } catch(e) {
+        container.innerHTML = `<div class="bracket-empty" style="color:var(--red)"><p>${e.message}</p></div>`;
+      }
+    }
+
+    function renderTournaments() {
+      const container = document.getElementById("tournamentsList");
+
+      let filtered = ALL_TOURNAMENTS;
+      if (activeFilter !== "all") {
+        filtered = filtered.filter(t => t.sport === activeFilter);
+      }
+      if (activeSearch) {
+        filtered = filtered.filter(t => {
+          const s = `${t.name} ${t.sport||""} ${t.location||""}`.toLowerCase();
+          return s.includes(activeSearch);
+        });
+      }
+
+      document.getElementById("countBadge").textContent = `${filtered.length} tournoi${filtered.length!==1?"s":""}`;
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div class="bracket-empty">
+            <span class="big-icon">🏆</span>
+            <h3 style="color:var(--text)">Aucun tournoi trouvé</h3>
+            <p>Essayez de modifier vos filtres ou votre recherche.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = "";
+
+      filtered.forEach(t => {
+          const card = document.createElement("div");
+          card.className = "tourney-card";
+
+          const statusMap = { a_venir:"À venir", en_cours:"En cours", termine:"Terminé" };
+          const statusCls = {  a_venir:"status-a_venir", en_cours:"status-en_cours", termine:"status-termine" };
+          const status = t.status ? String(t.status).replace("TournamentStatusEnum.","") : "a_venir";
+
+          // Header
+          const hdr = document.createElement("div");
+          hdr.className = "tourney-header";
+          hdr.innerHTML = `
+            <div class="tourney-emoji">${sportEmoji(t.sport)}</div>
+            <div style="flex:1">
+              <div class="tourney-title">${t.name}</div>
+              <div class="tourney-sport">${t.sport || "—"}</div>
+              <div class="tourney-meta">
+                ${t.location   ? `<span>📍 ${t.location}</span>` : ""}
+                ${t.start_date ? `<span>📅 ${fmtDate(t.start_date)}</span>` : ""}
+                ${t.end_date   ? `<span>🏁 ${fmtDate(t.end_date)}</span>` : ""}
+                <span>👥 ${t.teams.length} équipe${t.teams.length!==1?"s":""}</span>
+                <span>🎯 ${t.matches.length} match${t.matches.length!==1?"s":""}</span>
+              </div>
+              ${t.description ? `<p style="font-size:13px;color:var(--text-2);margin-top:8px;line-height:1.5">${t.description}</p>` : ""}
+            </div>
+            <span class="status-badge ${statusCls[status]||'status-a_venir'}">${statusMap[status]||status}</span>
+          `;
+          card.appendChild(hdr);
+
+          // Teams pills
+          if (t.teams.length) {
+            const teamRow = document.createElement("div");
+            teamRow.className = "teams-row";
+            t.teams.forEach(tm => {
+              const pill = document.createElement("span");
+              pill.className = "team-pill";
+              pill.textContent = tm.name;
+              pill.onclick = () => showTeam(tm.id);
+              teamRow.appendChild(pill);
+            });
+            card.appendChild(teamRow);
+          }
+
+          // Bracket
+          const bracketSec = document.createElement("div");
+          bracketSec.className = "bracket-section";
+
+          if (t.matches.length) {
+            const label = document.createElement("div");
+            label.style.cssText = "font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin-bottom:12px;";
+            label.textContent = "Tableau des matchs";
+            bracketSec.appendChild(label);
+
+            const bEl = buildBracket(t);
+            if (bEl) bracketSec.appendChild(bEl);
+          } else {
+            bracketSec.innerHTML = `<p style="color:var(--text-3);font-size:13px;">Aucun match généré.</p>`;
+          }
+          card.appendChild(bracketSec);
+          container.appendChild(card);
+        });
+    }
+
+    loadTournaments();
+  </script>
+</body>
+</html>

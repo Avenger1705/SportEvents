@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+    .admin-stat{background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:24px;text-align:center;transition:all .3s}
+    .admin-stat:hover{transform:translateY(-4px);border-color:rgba(31,107,255,.3);box-shadow:var(--shadow-glow)}
+    .admin-stat .stat-icon{font-size:32px;margin-bottom:8px}
+    .admin-stat .stat-val{font-size:32px;font-weight:900;background:linear-gradient(135deg,var(--blue),#79A8FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .admin-stat .stat-lbl{font-size:13px;color:var(--text-2);margin-top:4px}
+    .admin-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+    .admin-nav-btn{padding:14px 28px;border-radius:var(--r-md);font-size:14px;font-weight:700;font-family:inherit;border:1px solid var(--glass-border);background:var(--glass-bg);backdrop-filter:var(--backdrop);color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;text-decoration:none}
+    .admin-nav-btn:hover{border-color:var(--blue);background:var(--blue-subtle);transform:translateY(-2px)}
+    .admin-nav-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 16px var(--blue-glow)}
+    .admin-section{background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-xl);padding:28px;margin-bottom:24px}
+    .admin-section h3{font-size:18px;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .admin-table{width:100%;border-collapse:collapse;font-size:13px}
+    .admin-table th{text-align:left;padding:10px 12px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:11px;border-bottom:1px solid var(--border)}
+    .admin-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text-2)}
+    .admin-table tr:hover td{background:rgba(255,255,255,.02)}
+    .admin-table .avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--border)}
+    .role-tag{padding:2px 10px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase}
+    .role-tag.admin{background:rgba(210,153,34,.1);color:#E3B341;border:1px solid rgba(210,153,34,.3)}
+    .role-tag.joueur{background:rgba(46,160,67,.1);color:#56D364;border:1px solid rgba(46,160,67,.3)}
+    .role-tag.visitor{background:var(--blue-subtle);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3)}
+    .btn-danger{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25);padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+    .btn-danger:hover{background:rgba(239,68,68,.2)}
+    .chart-container{height:200px;display:flex;align-items:flex-end;gap:8px;padding:16px 0}
+    .chart-bar{flex:1;background:linear-gradient(to top,var(--blue),var(--blue-hover));border-radius:6px 6px 0 0;min-height:4px;transition:all .4s;position:relative;cursor:pointer}
+    .chart-bar:hover{opacity:.8}
+    .chart-bar .bar-label{position:absolute;bottom:-22px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--text-3);white-space:nowrap}
+    .chart-bar .bar-value{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:700;color:var(--blue-hover)}
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="admin-toggle-container">
+       <a href="dashboard.html" class="admin-switch">🏠 Mode Utilisateur</a>
+       <a href="admin-dashboard.html" class="admin-switch active">⚙️ Mode Admin</a>
+    </div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--blue)">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <main class="dashboard-layout">
+    <div class="dash-hero" style="margin-bottom:28px">
+      <div class="dash-hero-text">
+        <h2>🛡️ Panel Administrateur</h2>
+        <p>Gérez les utilisateurs, équipes, tournois et événements</p>
+      </div>
+    </div>
+
+    <div class="admin-nav">
+      <a href="admin-dashboard.html" class="admin-nav-btn active">📊 Statistiques</a>
+      <a href="admin-teams.html" class="admin-nav-btn">👥 Équipes</a>
+      <a href="admin-tournaments.html" class="admin-nav-btn">🏆 Tournois</a>
+      <a href="admin-users.html" class="admin-nav-btn">👤 Utilisateurs</a>
+    </div>
+
+    <div class="admin-grid" id="statsGrid">
+      <div class="admin-stat"><div class="stat-icon">👥</div><div class="stat-val" id="sUsers">—</div><div class="stat-lbl">Utilisateurs</div></div>
+      <div class="admin-stat"><div class="stat-icon">⚽</div><div class="stat-val" id="sJoueurs">—</div><div class="stat-lbl">Joueurs</div></div>
+      <div class="admin-stat"><div class="stat-icon">👁️</div><div class="stat-val" id="sVisitors">—</div><div class="stat-lbl">Visiteurs</div></div>
+      <div class="admin-stat"><div class="stat-icon">📅</div><div class="stat-val" id="sEvents">—</div><div class="stat-lbl">Événements</div></div>
+      <div class="admin-stat"><div class="stat-icon">🏟️</div><div class="stat-val" id="sTeams">—</div><div class="stat-lbl">Équipes</div></div>
+      <div class="admin-stat"><div class="stat-icon">🏆</div><div class="stat-val" id="sTournaments">—</div><div class="stat-lbl">Tournois</div></div>
+      <div class="admin-stat"><div class="stat-icon">⚔️</div><div class="stat-val" id="sMatches">—</div><div class="stat-lbl">Matchs</div></div>
+      <div class="admin-stat"><div class="stat-icon">🎟️</div><div class="stat-val" id="sBookings">—</div><div class="stat-lbl">Réservations</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div class="admin-section">
+        <h3>📊 Sports populaires</h3>
+        <div class="chart-container" id="sportsChart"></div>
+      </div>
+      <div class="admin-section">
+        <h3>📈 Inscriptions par mois</h3>
+        <div class="chart-container" id="monthChart"></div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <h3>👤 Derniers utilisateurs inscrits</h3>
+      <table class="admin-table">
+        <thead><tr><th></th><th>Utilisateur</th><th>Email</th><th>Rôle</th><th>Inscrit le</th></tr></thead>
+        <tbody id="recentUsersBody"></tbody>
+      </table>
+    </div>
+
+    <div class="admin-section">
+      <h3>📅 Derniers événements</h3>
+      <table class="admin-table">
+        <thead><tr><th>Titre</th><th>Sport</th><th>Date</th></tr></thead>
+        <tbody id="recentEventsBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    Auth.requireAuth();
+    if (Auth.getRole() !== "admin") { window.location.href = "dashboard.html"; }
+
+    document.getElementById("navUsername").textContent = Auth.getUsername();
+    API.getMe().then(u => {
+      document.getElementById("navProfileImg").src = getProfileImageUrl(u.profile_image);
+    }).catch(() => {});
+    document.getElementById("btnLogout").addEventListener("click", () => Auth.logout());
+
+    async function loadDashboard() {
+      try {
+        const d = await API.getAdminDashboard();
+        document.getElementById("sUsers").textContent = d.total_users;
+        document.getElementById("sJoueurs").textContent = d.total_joueurs;
+        document.getElementById("sVisitors").textContent = d.total_visitors;
+        document.getElementById("sEvents").textContent = d.total_events;
+        document.getElementById("sTeams").textContent = d.total_teams;
+        document.getElementById("sTournaments").textContent = d.total_tournaments;
+        document.getElementById("sMatches").textContent = d.total_matches;
+        document.getElementById("sBookings").textContent = d.total_bookings;
+
+        const sc = document.getElementById("sportsChart");
+        sc.innerHTML = "";
+        const maxS = Math.max(1, ...d.sports_distribution.map(s => s.count));
+        d.sports_distribution.slice(0, 8).forEach(s => {
+          const bar = document.createElement("div");
+          bar.className = "chart-bar";
+          bar.style.height = (s.count / maxS * 160) + "px";
+          bar.innerHTML = `<span class="bar-value">${s.count}</span><span class="bar-label">${s.sport}</span>`;
+          sc.appendChild(bar);
+        });
+        if (!d.sports_distribution.length) sc.innerHTML = '<p style="color:var(--text-3);margin:auto">Aucune donnée</p>';
+
+        const mc = document.getElementById("monthChart");
+        mc.innerHTML = "";
+        const maxM = Math.max(1, ...d.users_per_month.map(m => m.count));
+        d.users_per_month.slice(-8).forEach(m => {
+          const bar = document.createElement("div");
+          bar.className = "chart-bar";
+          bar.style.height = (m.count / maxM * 160) + "px";
+          bar.innerHTML = `<span class="bar-value">${m.count}</span><span class="bar-label">${m.month}</span>`;
+          mc.appendChild(bar);
+        });
+        if (!d.users_per_month.length) mc.innerHTML = '<p style="color:var(--text-3);margin:auto">Aucune donnée</p>';
+
+        const ub = document.getElementById("recentUsersBody");
+        ub.innerHTML = "";
+        d.recent_users.forEach(u => {
+          ub.innerHTML += `<tr>
+            <td><img class="avatar" src="${getProfileImageUrl(u.profile_image)}" alt=""></td>
+            <td style="color:var(--text);font-weight:600">${u.username}</td>
+            <td>${u.email}</td>
+            <td><span class="role-tag ${u.role}">${u.role}</span></td>
+            <td>${new Date(u.created_at).toLocaleDateString("fr-FR")}</td>
+          </tr>`;
+        });
+
+        const eb = document.getElementById("recentEventsBody");
+        eb.innerHTML = "";
+        d.recent_events.forEach(e => {
+          eb.innerHTML += `<tr>
+            <td style="color:var(--text);font-weight:600">${e.title}</td>
+            <td>${e.sport || "—"}</td>
+            <td>${e.event_date ? new Date(e.event_date).toLocaleDateString("fr-FR") : "—"}</td>
+          </tr>`;
+        });
+      } catch (err) { showToast(err.message, "error"); }
+    }
+    loadDashboard();
+  </script>
+</body>
+</html>

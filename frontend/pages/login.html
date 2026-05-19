@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion – Sport Events</title>
+  <meta name="description" content="Connectez-vous à votre compte Sport Events pour gérer vos événements sportifs.">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    /* ── Password Eye Toggle ─────────────────────────── */
+    .input-wrapper {
+      position: relative;
+    }
+    .input-wrapper input {
+      width: 100%;
+      padding-right: 48px;
+    }
+    .eye-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-3);
+      font-size: 18px;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color .2s;
+      z-index: 2;
+    }
+    .eye-toggle:hover { color: var(--blue-hover); }
+    .eye-toggle svg { width: 20px; height: 20px; fill: currentColor; }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper">
+    <div class="auth-card">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <span class="icon">🏆</span>
+        <h1>Sport Events</h1>
+        <p>Propulsez vos performances sportives</p>
+      </div>
+
+      <!-- Alert zone -->
+      <div id="alertZone"></div>
+
+      <!-- Form -->
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <label for="identifier">Email ou Nom d'utilisateur</label>
+          <input
+            id="identifier"
+            type="text"
+            placeholder="Ex: samir@gmail.com"
+            autocomplete="username"
+            required
+          >
+          <p class="form-hint" id="identifierHint">Identifiant requis</p>
+        </div>
+
+        <div class="form-group">
+          <label for="password">
+            Mot de passe
+            <a href="forgot-password.html" style="float:right; font-weight: 500;">Oublié ?</a>
+          </label>
+          <div class="input-wrapper">
+            <input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            >
+            <button type="button" class="eye-toggle" id="togglePw" tabindex="-1" aria-label="Afficher le mot de passe">
+              <svg id="eyeIconPw" viewBox="0 0 24 24">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+              </svg>
+            </button>
+          </div>
+          <p class="form-hint" id="passwordHint">Mot de passe requis</p>
+        </div>
+
+        <button id="btnLogin" type="submit" class="btn btn-primary mt-16">
+          Se connecter au compte
+        </button>
+      </form>
+
+      <div class="divider">Ou</div>
+
+      <div class="link-row">
+        Pas encore membre ? <a href="register.html">Créer un compte</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    Auth.redirectIfAuth();
+
+    const form      = document.getElementById("loginForm");
+    const identifierEl = document.getElementById("identifier");
+    const pwEl      = document.getElementById("password");
+    const btnLogin  = document.getElementById("btnLogin");
+    const alertZone = document.getElementById("alertZone");
+
+    function showAlert(msg, type = "error") {
+      alertZone.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+    }
+
+    // ── SVG icons ───────────────────────────────────────────
+    const EYE_OPEN = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+    const EYE_CLOSED = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46A11.8 11.8 0 001 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+
+    // ── Eye toggle ─────────────────────────────────────────
+    const togglePw = document.getElementById("togglePw");
+    const eyeIconPw = document.getElementById("eyeIconPw");
+    let pwVisible = false;
+    togglePw.addEventListener("click", () => {
+      pwVisible = !pwVisible;
+      pwEl.type = pwVisible ? "text" : "password";
+      eyeIconPw.innerHTML = pwVisible ? EYE_CLOSED : EYE_OPEN;
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alertZone.innerHTML = "";
+
+      const identifier = identifierEl.value.trim();
+      const password   = pwEl.value;
+
+      if (!identifier) {
+        document.getElementById("identifierHint").classList.add("visible");
+        identifierEl.classList.add("error");
+        return;
+      }
+      document.getElementById("identifierHint").classList.remove("visible");
+      identifierEl.classList.remove("error");
+
+      if (!password) {
+        document.getElementById("passwordHint").classList.add("visible");
+        pwEl.classList.add("error");
+        return;
+      }
+      document.getElementById("passwordHint").classList.remove("visible");
+      pwEl.classList.remove("error");
+
+      setButtonLoading(btnLogin, true, "Se connecter");
+
+      try {
+        const data = await API.login(identifier, password);
+        // Determine next page
+        if (!data.role) {
+          window.location.href = "role-selection.html";
+        } else {
+          window.location.href = "dashboard.html";
+        }
+      } catch (err) {
+        showAlert(err.message);
+        setButtonLoading(btnLogin, false, "Se connecter");
+      }
+    });
+
+    // Clear errors on input
+    identifierEl.addEventListener("input", () => { identifierEl.classList.remove("error"); });
+    pwEl.addEventListener("input",    () => { pwEl.classList.remove("error"); });
+  </script>
+</body>
+</html>

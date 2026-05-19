@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Utilisateurs – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .admin-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+    .admin-nav-btn{padding:14px 28px;border-radius:var(--r-md);font-size:14px;font-weight:700;font-family:inherit;border:1px solid var(--glass-border);background:var(--glass-bg);backdrop-filter:var(--backdrop);color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;text-decoration:none}
+    .admin-nav-btn:hover{border-color:var(--blue);background:var(--blue-subtle);transform:translateY(-2px)}
+    .admin-nav-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 16px var(--blue-glow)}
+    .users-table{width:100%;border-collapse:collapse;font-size:13px;background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-lg);overflow:hidden}
+    .users-table th{text-align:left;padding:14px 16px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;font-size:11px;background:rgba(0,0,0,.2)}
+    .users-table td{padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text-2)}
+    .users-table tr:hover td{background:rgba(255,255,255,.02)}
+    .users-table .avatar{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--border)}
+    .role-tag{padding:3px 12px;border-radius:100px;font-size:11px;font-weight:700;text-transform:uppercase}
+    .role-tag.admin{background:rgba(210,153,34,.1);color:#E3B341;border:1px solid rgba(210,153,34,.3)}
+    .role-tag.joueur{background:rgba(46,160,67,.1);color:#56D364;border:1px solid rgba(46,160,67,.3)}
+    .role-tag.visitor{background:var(--blue-subtle);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3)}
+    .btn-del-user{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+    .btn-del-user:hover{background:rgba(239,68,68,.2)}
+    .btn-view-user{background:rgba(31,107,255,.1);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;text-decoration:none}
+    .btn-view-user:hover{background:rgba(31,107,255,.2)}
+    .search-bar{width:100%;padding:14px 20px;background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:100px;color:var(--text);font-size:15px;font-family:inherit;outline:none;margin-bottom:20px;transition:all .25s}
+    .search-bar:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-glow)}
+    .search-bar::placeholder{color:var(--text-3)}
+    .filter-tabs{display:flex;gap:8px;margin-bottom:20px}
+    .filter-tab{padding:8px 18px;border-radius:100px;font-size:13px;font-weight:600;background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-2);cursor:pointer;transition:all .2s;font-family:inherit}
+    .filter-tab:hover{border-color:var(--blue)}
+    .filter-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    /* Pagination */
+    .pagination-bar{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:24px;flex-wrap:wrap}
+    .pg-btn{min-width:38px;height:38px;padding:0 10px;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--text-2);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+    .pg-btn:hover:not(:disabled){border-color:var(--blue);background:var(--blue-subtle);color:var(--blue-hover);transform:translateY(-1px)}
+    .pg-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px var(--blue-glow)}
+    .pg-btn:disabled{opacity:.35;cursor:not-allowed}
+    .pg-info{font-size:13px;color:var(--text-3);margin:0 8px}
+    .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+    .section-header h2{display:flex;align-items:center;gap:10px;margin:0;font-size:24px;font-weight:800}
+    .count-badge{font-size:12px;font-weight:700;background:var(--blue-subtle);color:var(--blue-hover);border:1px solid rgba(31,107,255,.25);border-radius:100px;padding:4px 14px}
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="admin-toggle-container">
+       <a href="dashboard.html" class="admin-switch">🏠 Mode Utilisateur</a>
+       <a href="admin-dashboard.html" class="admin-switch active">⚙️ Mode Admin</a>
+    </div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--blue)">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+  <main class="dashboard-layout">
+    <div class="admin-nav">
+      <a href="admin-dashboard.html" class="admin-nav-btn">📊 Statistiques</a>
+      <a href="admin-teams.html" class="admin-nav-btn">👥 Équipes</a>
+      <a href="admin-tournaments.html" class="admin-nav-btn">🏆 Tournois</a>
+      <a href="admin-users.html" class="admin-nav-btn active">👤 Utilisateurs</a>
+    </div>
+
+    <div class="section-header">
+      <h2>👤 Gestion des Utilisateurs <span class="count-badge" id="userCountBadge">0</span></h2>
+      <button class="btn btn-primary" id="btnCreateUser" style="width:auto;padding:12px 28px">＋ Créer un utilisateur</button>
+    </div>
+
+    <input type="search" class="search-bar" id="searchInput" placeholder="🔍 Rechercher par nom, email, rôle...">
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-role="all">Tous</button>
+      <button class="filter-tab" data-role="admin">🛡️ Admins</button>
+      <button class="filter-tab" data-role="joueur">⚽ Joueurs</button>
+      <button class="filter-tab" data-role="visitor">👁️ Visiteurs</button>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table class="users-table">
+        <thead><tr><th></th><th>Nom</th><th>Email</th><th>Rôle</th><th>Sport</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+    </div>
+    <div class="pagination-bar" id="paginationBar"></div>
+
+    <div class="modal-overlay" id="userModal">
+      <div class="modal-box" style="max-width:600px;position:relative;max-height:92vh;overflow-y:auto">
+        <button class="modal-close" id="modalCloseUser" style="position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--glass-hover);border:1px solid var(--border);color:var(--text-2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;z-index:10">✕</button>
+        <div class="modal-title" id="userModalTitle">Créer un utilisateur</div>
+        <div id="userModalAlert"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label for="uPrenom">Prénom *</label>
+            <input id="uPrenom" type="text" placeholder="John">
+          </div>
+          <div class="form-group">
+            <label for="uNom">Nom *</label>
+            <input id="uNom" type="text" placeholder="Doe">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="uUsername">Nom d'utilisateur *</label>
+          <input id="uUsername" type="text" placeholder="johndoe">
+        </div>
+
+        <div class="form-group">
+          <label for="uEmail">Email *</label>
+          <input id="uEmail" type="email" placeholder="john@example.com">
+        </div>
+
+        <div class="form-group">
+          <label for="uRole">Rôle *</label>
+          <select id="uRole">
+            <option value="visitor">Visiteur</option>
+            <option value="joueur">Joueur</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="uSportGroup" style="display:none;">
+          <label for="uSport">Sport pratiqué</label>
+          <input id="uSport" type="text" placeholder="Ex: Football">
+        </div>
+
+        <div class="form-group">
+          <label for="uPassword">Mot de passe <span id="pwdHint" style="font-weight:400;color:var(--text-3);font-size:11px;">*</span></label>
+          <input id="uPassword" type="password" placeholder="Min. 6 caractères">
+        </div>
+
+        <button class="btn btn-primary" id="btnSubmitUser" style="margin-top:20px">Enregistrer</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    Auth.requireAuth();
+    if (Auth.getRole() !== "admin") window.location.href = "dashboard.html";
+    document.getElementById("navUsername").textContent = Auth.getUsername();
+    API.getMe().then(u => { document.getElementById("navProfileImg").src = getProfileImageUrl(u.profile_image); }).catch(() => {});
+    document.getElementById("btnLogout").addEventListener("click", () => Auth.logout());
+
+    const PAGE_SIZE = 25;
+    let allUsers = [];
+    let activeRole = "all";
+    let searchTerm = "";
+    let currentPage = 1;
+
+    document.getElementById("searchInput").addEventListener("input", e => {
+      searchTerm = e.target.value.toLowerCase().trim();
+      currentPage = 1;
+      renderUsers();
+    });
+
+    document.getElementById("filterTabs").addEventListener("click", e => {
+      const tab = e.target.closest(".filter-tab");
+      if (!tab) return;
+      document.querySelectorAll(".filter-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      activeRole = tab.dataset.role;
+      currentPage = 1;
+      renderUsers();
+    });
+
+    function getFiltered() {
+      let filtered = allUsers;
+      if (activeRole !== "all") filtered = filtered.filter(u => u.role === activeRole);
+      if (searchTerm) {
+        filtered = filtered.filter(u => {
+          const s = `${u.nom || ""} ${u.prenom || ""} ${u.username} ${u.email} ${u.role} ${u.practice_sport || ""}`.toLowerCase();
+          return s.includes(searchTerm);
+        });
+      }
+      return filtered;
+    }
+
+    function renderUsers() {
+      const filtered = getFiltered();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const body = document.getElementById("usersBody");
+      if (!filtered.length) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-3)">Aucun utilisateur trouvé</td></tr>';
+        renderPagination(0, 1);
+        return;
+      }
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageUsers = filtered.slice(start, start + PAGE_SIZE);
+
+      body.innerHTML = "";
+      pageUsers.forEach(u => {
+        const name = `${u.prenom || ""} ${u.nom || ""}`.trim() || u.username;
+        body.innerHTML += `<tr>
+          <td><img class="avatar" src="${getProfileImageUrl(u.profile_image)}" alt=""></td>
+          <td style="color:var(--text);font-weight:600">${name}<div style="font-size:11px;color:var(--text-3)">@${u.username}</div></td>
+          <td>${u.email}</td>
+          <td><span class="role-tag ${u.role}">${u.role}</span></td>
+          <td>${u.practice_sport || "—"}</td>
+          <td>${new Date(u.created_at).toLocaleDateString("fr-FR")}</td>
+          <td style="display:flex;gap:6px">
+            <button class="btn-view-user btn-edit-user" data-id="${u.id}">✏️</button>
+            ${u.role === "joueur" ? `<a href="player-profile.html?id=${u.id}" class="btn-view-user">Voir</a>` : ""}
+            <button class="btn-del-user" data-id="${u.id}" data-name="${name}">Supprimer</button>
+          </td>
+        </tr>`;
+      });
+
+      body.querySelectorAll(".btn-edit-user").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const user = filtered.find(x => x.id == btn.dataset.id);
+          if (user) openEditUserModal(user);
+        });
+      });
+
+      body.querySelectorAll(".btn-del-user").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = parseInt(btn.dataset.id);
+          const name = btn.dataset.name;
+          if (!confirm(`Supprimer l'utilisateur "${name}" ?`)) return;
+          try { await API.deleteUser(id); showToast("Utilisateur supprimé", "success"); loadUsers(); }
+          catch(err) { showToast(err.message, "error"); }
+        });
+      });
+
+      renderPagination(filtered.length, totalPages);
+    }
+
+    function renderPagination(total, totalPages) {
+      const bar = document.getElementById("paginationBar");
+      if (totalPages <= 1) { bar.innerHTML = ""; return; }
+
+      const from = (currentPage - 1) * PAGE_SIZE + 1;
+      const to = Math.min(currentPage * PAGE_SIZE, total);
+
+      let html = `<span class="pg-info">${from}–${to} sur ${total}</span>`;
+      html += `<button class="pg-btn" id="pgPrev" ${currentPage === 1 ? "disabled" : ""}>&larr; Précédent</button>`;
+
+      // Show at most 7 page buttons with ellipsis
+      const pages = [];
+      if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        if (currentPage > 3) pages.push("...");
+        for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+        if (currentPage < totalPages - 2) pages.push("...");
+        pages.push(totalPages);
+      }
+
+      pages.forEach(p => {
+        if (p === "...") {
+          html += `<span class="pg-info">…</span>`;
+        } else {
+          html += `<button class="pg-btn${p === currentPage ? " active" : ""}" data-page="${p}">${p}</button>`;
+        }
+      });
+
+      html += `<button class="pg-btn" id="pgNext" ${currentPage === totalPages ? "disabled" : ""}>Suivant &rarr;</button>`;
+      bar.innerHTML = html;
+
+      bar.querySelector("#pgPrev")?.addEventListener("click", () => { currentPage--; renderUsers(); window.scrollTo({top:0,behavior:"smooth"}); });
+      bar.querySelector("#pgNext")?.addEventListener("click", () => { currentPage++; renderUsers(); window.scrollTo({top:0,behavior:"smooth"}); });
+      bar.querySelectorAll(".pg-btn[data-page]").forEach(btn => {
+        btn.addEventListener("click", () => { currentPage = parseInt(btn.dataset.page); renderUsers(); window.scrollTo({top:0,behavior:"smooth"}); });
+      });
+    }
+
+    async function loadUsers() {
+      try {
+        allUsers = await API.getAdminUsers();
+        document.getElementById("userCountBadge").textContent = allUsers.length;
+        currentPage = 1;
+        renderUsers();
+      } catch(err) { showToast(err.message, "error"); }
+    }
+
+    // ── CRUD Logic ──
+    const userModal = document.getElementById("userModal");
+    let editingUserId = null;
+
+    document.getElementById("uRole").addEventListener("change", e => {
+      document.getElementById("uSportGroup").style.display = e.target.value === "joueur" ? "block" : "none";
+    });
+
+    function closeUserModal() { userModal.classList.remove("open"); }
+    document.getElementById("modalCloseUser").addEventListener("click", closeUserModal);
+    userModal.addEventListener("click", e => { if (e.target === userModal) closeUserModal(); });
+
+    document.getElementById("btnCreateUser").addEventListener("click", () => {
+      editingUserId = null;
+      document.getElementById("userModalTitle").textContent = "Créer un utilisateur";
+      document.getElementById("userModalAlert").innerHTML = "";
+      document.getElementById("pwdHint").textContent = "*";
+      
+      document.getElementById("uPrenom").value = "";
+      document.getElementById("uNom").value = "";
+      document.getElementById("uUsername").value = "";
+      document.getElementById("uEmail").value = "";
+      document.getElementById("uRole").value = "visitor";
+      document.getElementById("uRole").dispatchEvent(new Event("change"));
+      document.getElementById("uSport").value = "";
+      document.getElementById("uPassword").value = "";
+      
+      userModal.classList.add("open");
+    });
+
+    function openEditUserModal(user) {
+      editingUserId = user.id;
+      document.getElementById("userModalTitle").textContent = "Modifier l'utilisateur";
+      document.getElementById("userModalAlert").innerHTML = "";
+      document.getElementById("pwdHint").textContent = "(Laissez vide pour conserver)";
+      
+      document.getElementById("uPrenom").value = user.prenom || "";
+      document.getElementById("uNom").value = user.nom || "";
+      document.getElementById("uUsername").value = user.username || "";
+      document.getElementById("uEmail").value = user.email || "";
+      document.getElementById("uRole").value = user.role || "visitor";
+      document.getElementById("uRole").dispatchEvent(new Event("change"));
+      document.getElementById("uSport").value = user.practice_sport || "";
+      document.getElementById("uPassword").value = "";
+      
+      userModal.classList.add("open");
+    }
+
+    document.getElementById("btnSubmitUser").addEventListener("click", async () => {
+      const data = {
+        prenom: document.getElementById("uPrenom").value.trim(),
+        nom: document.getElementById("uNom").value.trim(),
+        username: document.getElementById("uUsername").value.trim(),
+        email: document.getElementById("uEmail").value.trim(),
+        role: document.getElementById("uRole").value,
+        practice_sport: document.getElementById("uRole").value === "joueur" ? document.getElementById("uSport").value.trim() : null,
+        password: document.getElementById("uPassword").value
+      };
+
+      if (!data.prenom || !data.nom || !data.username || !data.email) {
+        document.getElementById("userModalAlert").innerHTML = '<div class="alert alert-error">Veuillez remplir tous les champs obligatoires</div>';
+        return;
+      }
+
+      if (!editingUserId && (!data.password || data.password.length < 6)) {
+        document.getElementById("userModalAlert").innerHTML = '<div class="alert alert-error">Mot de passe de 6 caractères minimum requis</div>';
+        return;
+      }
+      if (editingUserId && !data.password) delete data.password;
+
+      const btn = document.getElementById("btnSubmitUser");
+      const orig = btn.textContent;
+      setButtonLoading(btn, true, orig);
+
+      try {
+        if (editingUserId) {
+          await API.updateUser(editingUserId, data);
+          showToast("Utilisateur mis à jour", "success");
+        } else {
+          await API.createUser(data);
+          showToast("Utilisateur créé", "success");
+        }
+        closeUserModal();
+        loadUsers();
+      } catch (err) {
+        document.getElementById("userModalAlert").innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      } finally {
+        setButtonLoading(btn, false, orig);
+      }
+    });
+
+    loadUsers();
+  </script>
+</body>
+</html>

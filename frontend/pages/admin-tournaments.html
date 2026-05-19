@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tournois – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .admin-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px}
+    .admin-nav-btn{padding:14px 28px;border-radius:var(--r-md);font-size:14px;font-weight:700;font-family:inherit;border:1px solid var(--glass-border);background:var(--glass-bg);backdrop-filter:var(--backdrop);color:var(--text);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;text-decoration:none}
+    .admin-nav-btn:hover{border-color:var(--blue);background:var(--blue-subtle);transform:translateY(-2px)}
+    .admin-nav-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 16px var(--blue-glow)}
+    .tourney-card{background:var(--glass-bg);backdrop-filter:var(--backdrop);border:1px solid var(--glass-border);border-radius:var(--r-lg);padding:24px;margin-bottom:16px;cursor:pointer;transition:all .3s}
+    .tourney-card:hover{border-color:rgba(31,107,255,.3);transform:translateY(-3px);box-shadow:var(--shadow-glow)}
+    .tourney-card h4{font-size:20px;font-weight:800;margin-bottom:4px}
+    .tourney-meta{font-size:13px;color:var(--text-2);display:flex;flex-wrap:wrap;gap:16px;margin-top:8px}
+    .bracket-container{overflow-x:auto;padding:20px 0}
+    .bracket{display:flex;gap:40px;min-width:max-content}
+    .round{display:flex;flex-direction:column;justify-content:center;gap:16px;min-width:200px}
+    .round-title{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;text-align:center}
+    .match-card{background:var(--bg-3);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;transition:all .2s}
+    .match-card:hover{border-color:var(--blue)}
+    .match-card.won{border-color:rgba(46,160,67,.4)}
+    .match-team{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;font-size:13px;font-weight:600;margin-bottom:4px}
+    .match-team.winner{background:rgba(46,160,67,.1);color:#56D364}
+    .match-team.loser{color:var(--text-3)}
+    .match-team .score{font-weight:800;font-size:15px}
+    .match-status{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;text-align:center;padding:4px 8px;border-radius:4px;margin-top:4px}
+    .match-status.a_venir{background:var(--blue-subtle);color:var(--blue-hover)}
+    .match-status.en_cours{background:rgba(245,158,11,.1);color:#F59E0B}
+    .match-status.termine{background:rgba(46,160,67,.1);color:#56D364}
+    .team-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:300px;overflow-y:auto;margin-bottom:16px}
+    .team-select-item{padding:10px 14px;background:var(--bg-3);border:2px solid var(--border);border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:8px}
+    .team-select-item:hover{border-color:rgba(31,107,255,.4)}
+    .team-select-item.selected{border-color:var(--blue);background:var(--blue-subtle)}
+    .team-select-item .check{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:transparent;transition:all .2s}
+    .team-select-item.selected .check{background:var(--blue);border-color:var(--blue);color:#fff}
+    .btn-set-result{background:rgba(31,107,255,.1);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;width:100%;transition:all .2s}
+    .btn-set-result:hover{background:rgba(31,107,255,.2)}
+    .btn-del-t{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.25);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+    .btn-del-t:hover{background:rgba(239,68,68,.2)}
+    .btn-plan-t{background:rgba(31,107,255,.1);color:var(--blue-hover);border:1px solid rgba(31,107,255,.3);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;margin-right:6px}
+    .btn-plan-t:hover{background:rgba(31,107,255,.2)}
+    .sch-row{background:var(--bg-3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+    .sch-row-title{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+    .sch-round-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;background:var(--blue-subtle);color:var(--blue-hover);padding:2px 8px;border-radius:4px}
+    .sch-inputs{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+    @media(max-width:520px){.sch-inputs{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="admin-toggle-container">
+       <a href="dashboard.html" class="admin-switch">🏠 Mode Utilisateur</a>
+       <a href="admin-dashboard.html" class="admin-switch active">⚙️ Mode Admin</a>
+    </div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--blue)">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+  <main class="dashboard-layout">
+    <div class="admin-nav">
+      <a href="admin-dashboard.html" class="admin-nav-btn">📊 Statistiques</a>
+      <a href="admin-teams.html" class="admin-nav-btn">👥 Équipes</a>
+      <a href="admin-tournaments.html" class="admin-nav-btn active">🏆 Tournois</a>
+      <a href="admin-users.html" class="admin-nav-btn">👤 Utilisateurs</a>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px">
+      <h2 style="font-size:24px;font-weight:800">🏆 Gestion des Tournois</h2>
+      <button class="btn btn-primary" id="btnCreateTournament" style="width:auto;padding:12px 28px">＋ Créer un tournoi</button>
+    </div>
+
+    <div id="tournamentsList"></div>
+
+    <div class="modal-overlay" id="createModal">
+      <div class="modal-box" style="max-width:650px;position:relative;max-height:90vh;overflow-y:auto">
+        <button class="modal-close" id="modalCloseCreate" style="position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--glass-hover);border:1px solid var(--border);color:var(--text-2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+        <div class="modal-title">🏆 Nouveau Tournoi</div>
+        <div id="createAlert"></div>
+        <div class="form-group"><label>Nom *</label><input id="tName" type="text" placeholder="Ex: Coupe d'Hiver 2026"></div>
+        <div class="form-group"><label>Sport *</label><select id="tSport"><option value="">— Choisir —</option></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group"><label>Date début</label><input id="tStart" type="datetime-local"></div>
+          <div class="form-group"><label>Date fin</label><input id="tEnd" type="datetime-local"></div>
+        </div>
+        <div class="form-group"><label>Lieu</label><input id="tLocation" type="text" placeholder="Ex: Stade Municipal"></div>
+        <div class="form-group"><label>Durée des matchs</label><input id="tDuration" type="text" placeholder="Ex: 90 min"></div>
+        <div class="form-group"><label>Description</label><textarea id="tDesc" rows="2" style="width:100%;padding:12px;background:var(--bg-3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;font-family:inherit;resize:vertical;outline:none"></textarea></div>
+        <label style="font-size:13px;font-weight:600;color:var(--text-2);display:block;margin-bottom:8px">Sélectionner les équipes participantes</label>
+        <div class="team-select-grid" id="teamSelectGrid"></div>
+        <button class="btn btn-primary" id="btnSubmitTournament" style="margin-top:12px">Créer le tournoi</button>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="resultModal">
+      <div class="modal-box" style="max-width:420px;position:relative">
+        <button class="modal-close" id="modalCloseResult" style="position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--glass-hover);border:1px solid var(--border);color:var(--text-2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+        <div class="modal-title">⚽ Résultat du match</div>
+        <div id="resultAlert"></div>
+        <div id="resultTeams" style="margin-bottom:16px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="form-group"><label>Score Équipe A</label><input id="rScoreA" type="number" min="0" value="0"></div>
+          <div class="form-group"><label>Score Équipe B</label><input id="rScoreB" type="number" min="0" value="0"></div>
+        </div>
+        <div class="form-group"><label>Gagnant</label><select id="rWinner"><option value="">— Choisir —</option></select></div>
+        <div class="form-group"><label>Statut</label><select id="rStatus"><option value="a_venir">À venir</option><option value="en_cours">En cours</option><option value="termine">Terminé</option></select></div>
+        <button class="btn btn-primary" id="btnSubmitResult">Enregistrer le résultat</button>
+      </div>
+    </div>
+
+    <!-- Schedule Modal -->
+    <div class="modal-overlay" id="scheduleModal">
+      <div class="modal-box" style="max-width:680px;position:relative;max-height:92vh;overflow-y:auto">
+        <button id="modalCloseSchedule" style="position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:50%;background:var(--glass-hover);border:1px solid var(--border);color:var(--text-2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+        <div class="modal-title">📅 Planifier les matchs</div>
+        <p style="font-size:13px;color:var(--text-2);margin-bottom:18px;">Définissez la date, l'heure et le lieu de chaque match. Les réservations seront ouvertes jusqu'à 1 heure avant le début.</p>
+        <div id="scheduleAlert"></div>
+        <div id="scheduleMatchesList"></div>
+        <button class="btn btn-primary" id="btnSubmitSchedule" style="margin-top:8px">💾 Enregistrer la planification</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    Auth.requireAuth();
+    const isAdmin = Auth.getRole() === "admin";
+    document.getElementById("navUsername").textContent = Auth.getUsername();
+    API.getMe().then(u => { document.getElementById("navProfileImg").src = getProfileImageUrl(u.profile_image); }).catch(() => {});
+    document.getElementById("btnLogout").addEventListener("click", () => Auth.logout());
+
+    if (!isAdmin) {
+      document.getElementById("btnCreateTournament").style.display = "none";
+    }
+
+    let allTeams = [];
+    let selectedTeamIds = new Set();
+    let editingMatchId = null;
+    let editingMatch = null;
+
+    const createModal = document.getElementById("createModal");
+    const resultModal = document.getElementById("resultModal");
+    const tSport = document.getElementById("tSport");
+
+    async function init() {
+      SPORTS_LIST.forEach(s => { tSport.innerHTML += `<option value="${s}">${s}</option>`; });
+      try { allTeams = await API.getTeams(); } catch(e) {}
+      loadTournaments();
+    }
+
+    tSport.addEventListener("change", () => {
+      const sport = tSport.value;
+      const grid = document.getElementById("teamSelectGrid");
+      grid.innerHTML = "";
+      selectedTeamIds.clear();
+      const filtered = allTeams.filter(t => t.sport === sport);
+      if (!filtered.length) { grid.innerHTML = '<p style="color:var(--text-3);grid-column:1/-1">Aucune équipe pour ce sport. Créez des équipes d\'abord.</p>'; return; }
+      filtered.forEach(t => {
+        const item = document.createElement("div");
+        item.className = "team-select-item";
+        item.innerHTML = `<span class="check">✓</span>${t.name} (${t.members.length}j)`;
+        item.addEventListener("click", () => {
+          item.classList.toggle("selected");
+          if (item.classList.contains("selected")) selectedTeamIds.add(t.id);
+          else selectedTeamIds.delete(t.id);
+        });
+        grid.appendChild(item);
+      });
+    });
+
+    document.getElementById("btnCreateTournament").addEventListener("click", () => {
+      ["tName","tStart","tEnd","tLocation","tDuration"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("tDesc").value = "";
+      tSport.value = "";
+      document.getElementById("teamSelectGrid").innerHTML = "";
+      selectedTeamIds.clear();
+      document.getElementById("createAlert").innerHTML = "";
+      createModal.classList.add("open");
+    });
+    document.getElementById("modalCloseCreate").addEventListener("click", () => createModal.classList.remove("open"));
+    createModal.addEventListener("click", e => { if (e.target === createModal) createModal.classList.remove("open"); });
+
+    document.getElementById("btnSubmitTournament").addEventListener("click", async () => {
+      const name = document.getElementById("tName").value.trim();
+      const sport = tSport.value;
+      if (!name || !sport) { document.getElementById("createAlert").innerHTML = '<div class="alert alert-error">Nom et sport requis</div>'; return; }
+      if (selectedTeamIds.size < 2) { document.getElementById("createAlert").innerHTML = '<div class="alert alert-error">Sélectionnez au moins 2 équipes</div>'; return; }
+
+      const btn = document.getElementById("btnSubmitTournament");
+      setButtonLoading(btn, true, "Créer");
+      try {
+        await API.createTournament({
+          name, sport,
+          description: document.getElementById("tDesc").value.trim(),
+          location: document.getElementById("tLocation").value.trim(),
+          start_date: document.getElementById("tStart").value || null,
+          end_date: document.getElementById("tEnd").value || null,
+          match_duration: document.getElementById("tDuration").value.trim(),
+          team_ids: [...selectedTeamIds],
+        });
+        showToast("Tournoi créé", "success");
+        createModal.classList.remove("open");
+        loadTournaments();
+      } catch(err) { document.getElementById("createAlert").innerHTML = `<div class="alert alert-error">${err.message}</div>`; }
+      finally { setButtonLoading(btn, false, "Créer le tournoi"); }
+    });
+
+    document.getElementById("modalCloseResult").addEventListener("click", () => resultModal.classList.remove("open"));
+    resultModal.addEventListener("click", e => { if (e.target === resultModal) resultModal.classList.remove("open"); });
+
+    function openResultModal(match) {
+      editingMatchId = match.id;
+      editingMatch = match;
+      document.getElementById("resultAlert").innerHTML = "";
+      const teamA = match.team_a ? match.team_a.name : "TBD";
+      const teamB = match.team_b ? match.team_b.name : "TBD";
+      document.getElementById("resultTeams").innerHTML = `<div style="text-align:center;font-size:18px;font-weight:800;padding:12px;background:var(--bg-3);border-radius:12px">${teamA} <span style="color:var(--text-3);margin:0 8px">vs</span> ${teamB}</div>`;
+      document.getElementById("rScoreA").value = match.score_a || 0;
+      document.getElementById("rScoreB").value = match.score_b || 0;
+      document.getElementById("rStatus").value = match.status || "a_venir";
+
+      const wSel = document.getElementById("rWinner");
+      wSel.innerHTML = '<option value="">— Choisir —</option>';
+      if (match.team_a) wSel.innerHTML += `<option value="${match.team_a.id}" ${match.winner && match.winner.id === match.team_a.id ? "selected" : ""}>${match.team_a.name}</option>`;
+      if (match.team_b) wSel.innerHTML += `<option value="${match.team_b.id}" ${match.winner && match.winner.id === match.team_b.id ? "selected" : ""}>${match.team_b.name}</option>`;
+
+      resultModal.classList.add("open");
+    }
+
+    document.getElementById("btnSubmitResult").addEventListener("click", async () => {
+      const btn = document.getElementById("btnSubmitResult");
+      setButtonLoading(btn, true, "Enregistrer");
+      try {
+        const data = {
+          score_a: parseInt(document.getElementById("rScoreA").value) || 0,
+          score_b: parseInt(document.getElementById("rScoreB").value) || 0,
+          status: document.getElementById("rStatus").value,
+        };
+        const w = document.getElementById("rWinner").value;
+        if (w) data.winner_id = parseInt(w);
+        await API.updateMatch(editingMatchId, data);
+        showToast("Résultat enregistré", "success");
+        resultModal.classList.remove("open");
+        loadTournaments();
+      } catch(err) { document.getElementById("resultAlert").innerHTML = `<div class="alert alert-error">${err.message}</div>`; }
+      finally { setButtonLoading(btn, false, "Enregistrer le résultat"); }
+    });
+
+    function getRoundName(round, totalRounds) {
+      if (round === totalRounds) return "Finale";
+      if (round === totalRounds - 1) return "Demi-finales";
+      if (round === totalRounds - 2) return "Quarts de finale";
+      return `Tour ${round}`;
+    }
+
+    async function loadTournaments() {
+      const container = document.getElementById("tournamentsList");
+      try {
+        const tournaments = await API.getTournaments();
+        if (!tournaments.length) {
+          container.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-2)"><span style="font-size:48px;display:block;margin-bottom:12px">🏆</span><h3 style="color:var(--text)">Aucun tournoi</h3><p>Créez votre premier tournoi</p></div>';
+          return;
+        }
+        container.innerHTML = "";
+        tournaments.forEach(t => {
+          const div = document.createElement("div");
+          div.className = "tourney-card";
+          div.style.cursor = "default";
+          const totalRounds = Math.max(1, ...t.matches.map(m => m.round_number));
+          div.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <h4>${t.name}</h4>
+                <div style="font-size:12px;color:var(--blue-hover);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${sportEmoji(t.sport)} ${t.sport}</div>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;">
+                ${isAdmin ? `<button class="btn-plan-t" data-tid="${t.id}">📅 Planifier</button>` : ""}
+                ${isAdmin ? `<button class="btn-del-t" data-id="${t.id}">🗑️</button>` : ""}
+              </div>
+            </div>
+            <div class="tourney-meta">
+              <span>📍 ${t.location || "—"}</span>
+              <span>📅 ${t.start_date ? formatDateFr(t.start_date) : "—"}</span>
+              <span>👥 ${t.teams.length} équipes</span>
+              <span>⚔️ ${t.matches.length} matchs</span>
+            </div>
+            ${t.description ? `<p style="font-size:13px;color:var(--text-2);margin-top:8px">${t.description}</p>` : ""}
+            <div class="bracket-container"><div class="bracket" id="bracket-${t.id}"></div></div>`;
+          container.appendChild(div);
+
+          const delBtn = div.querySelector(".btn-del-t");
+          if (delBtn) {
+            delBtn.addEventListener("click", async () => {
+              if (!confirm(`Supprimer le tournoi "${t.name}" ?`)) return;
+              try { await API.deleteTournament(t.id); showToast("Tournoi supprimé", "success"); loadTournaments(); }
+              catch(err) { showToast(err.message, "error"); }
+            });
+          }
+
+          const planBtn = div.querySelector(".btn-plan-t");
+          if (planBtn) planBtn.addEventListener("click", () => openScheduleModal(t));
+
+          const bracketEl = div.querySelector(`#bracket-${t.id}`);
+          for (let r = 1; r <= totalRounds; r++) {
+            const roundMatches = t.matches.filter(m => m.round_number === r);
+            const roundDiv = document.createElement("div");
+            roundDiv.className = "round";
+            roundDiv.innerHTML = `<div class="round-title">${getRoundName(r, totalRounds)}</div>`;
+            roundMatches.forEach(m => {
+              const mc = document.createElement("div");
+              mc.className = "match-card" + (m.status === "termine" ? " won" : "");
+              const tA = m.team_a ? m.team_a.name : "TBD";
+              const tB = m.team_b ? m.team_b.name : "TBD";
+              const wId = m.winner ? m.winner.id : null;
+              mc.innerHTML = `
+                <div class="match-team ${wId && m.team_a && wId === m.team_a.id ? 'winner' : (wId ? 'loser' : '')}">${tA} <span class="score">${m.score_a !== null ? m.score_a : "—"}</span></div>
+                <div class="match-team ${wId && m.team_b && wId === m.team_b.id ? 'winner' : (wId ? 'loser' : '')}">${tB} <span class="score">${m.score_b !== null ? m.score_b : "—"}</span></div>
+                <div class="match-status ${m.status}">${m.status === "a_venir" ? "À venir" : m.status === "en_cours" ? "En cours" : "Terminé"}</div>
+                ${m.match_date ? `<div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:4px">${formatDateFr(m.match_date)}</div>` : ""}
+                ${isAdmin && m.team_a && m.team_b ? `<button class="btn-set-result">Résultat</button>` : ""}`;
+              const resBtn = mc.querySelector(".btn-set-result");
+              if (resBtn) resBtn.addEventListener("click", () => openResultModal(m));
+              roundDiv.appendChild(mc);
+            });
+            bracketEl.appendChild(roundDiv);
+          }
+        });
+      } catch(err) { container.innerHTML = `<div style="color:var(--red)">${err.message}</div>`; }
+    }
+
+    init();
+
+    // ── Schedule modal ────────────────────────────────────────────────────────
+    let schedulingTournament = null;
+    const scheduleModal = document.getElementById("scheduleModal");
+    document.getElementById("modalCloseSchedule").addEventListener("click", () => scheduleModal.classList.remove("open"));
+    scheduleModal.addEventListener("click", e => { if (e.target === scheduleModal) scheduleModal.classList.remove("open"); });
+
+    function openScheduleModal(t) {
+      schedulingTournament = t;
+      document.getElementById("scheduleAlert").innerHTML = "";
+      const list = document.getElementById("scheduleMatchesList");
+      list.innerHTML = "";
+
+      const totalRounds = t.matches.length ? Math.max(...t.matches.map(m => m.round_number)) : 0;
+      const getRound = r => r === totalRounds ? "Finale" : r === totalRounds-1 ? "Demi-finales" : r === totalRounds-2 ? "Quarts de finale" : `Tour ${r}`;
+
+      // Group by round
+      for (let r = 1; r <= totalRounds; r++) {
+        const roundMatches = t.matches.filter(m => m.round_number === r).sort((a,b) => a.match_order - b.match_order);
+        if (!roundMatches.length) continue;
+
+        const roundHeader = document.createElement("div");
+        roundHeader.style.cssText = "font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin:16px 0 8px;";
+        roundHeader.textContent = getRound(r);
+        list.appendChild(roundHeader);
+
+        roundMatches.forEach(m => {
+          const tA = m.team_a ? m.team_a.name : "TBD";
+          const tB = m.team_b ? m.team_b.name : "TBD";
+          const curDate = m.match_date ? new Date(m.match_date).toISOString().slice(0,16) : "";
+          const curTime = m.match_time || "";
+          const curLoc  = m.location || "";
+
+          const row = document.createElement("div");
+          row.className = "sch-row";
+          row.innerHTML = `
+            <div class="sch-row-title">
+              <span class="sch-round-label">${getRound(r)}</span>
+              <span style="color:var(--text)">${tA}</span>
+              <span style="color:var(--text-3);font-size:11px">vs</span>
+              <span style="color:var(--text)">${tB}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div class="form-group" style="margin:0">
+                <label style="font-size:11px">Date &amp; Heure</label>
+                <input type="datetime-local" class="sch-date" data-mid="${m.id}" value="${curDate}">
+              </div>
+              <div class="form-group" style="margin:0">
+                <label style="font-size:11px">Lieu (optionnel)</label>
+                <input type="text" class="sch-loc" data-mid="${m.id}" value="${curLoc}" placeholder="Ex: Stade A">
+              </div>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+      }
+
+      if (!t.matches.length) {
+        list.innerHTML = '<p style="color:var(--text-3)">Aucun match généré pour ce tournoi.</p>';
+      }
+      scheduleModal.classList.add("open");
+    }
+
+    document.getElementById("btnSubmitSchedule").addEventListener("click", async () => {
+      if (!schedulingTournament) return;
+      const btn = document.getElementById("btnSubmitSchedule");
+      setButtonLoading(btn, true, "Enregistrer");
+      document.getElementById("scheduleAlert").innerHTML = "";
+      try {
+        const dateInputs = document.querySelectorAll(".sch-date");
+        const locInputs  = document.querySelectorAll(".sch-loc");
+        const matches = [];
+        dateInputs.forEach(inp => {
+          const mid = parseInt(inp.dataset.mid);
+          const locEl = document.querySelector(`.sch-loc[data-mid="${mid}"]`);
+          matches.push({
+            match_id:   mid,
+            match_date: inp.value || null,
+            location:   locEl ? locEl.value.trim() || null : null,
+          });
+        });
+        const res = await API.scheduleMatches(schedulingTournament.id, matches);
+        showToast(`✅ ${res.message}`, "success");
+        scheduleModal.classList.remove("open");
+        loadTournaments();
+      } catch(err) {
+        document.getElementById("scheduleAlert").innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+      } finally {
+        setButtonLoading(btn, false, "💾 Enregistrer la planification");
+      }
+    });
+  </script>
+</body>
+</html>

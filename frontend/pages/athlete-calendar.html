@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mon Calendrier – Sport Events</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .match-card {
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all .2s;
+    }
+    .match-card:hover { border-color: var(--blue); }
+    .match-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; font-size: 12px; color: var(--text-3);
+    }
+    .match-teams {
+      font-size: 18px; font-weight: 800; text-align: center; margin-bottom: 12px;
+    }
+    .match-score {
+      font-size: 24px; font-weight: 900; color: var(--blue-hover); text-align: center; margin-bottom: 12px;
+    }
+    .match-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12px; font-weight: 600;
+    }
+    .status-badge {
+      padding: 4px 10px; border-radius: 100px;
+    }
+    .status-a_venir { background: var(--blue-subtle); color: var(--blue-hover); }
+    .status-termine { background: rgba(46,160,67,.1); color: #56D364; }
+
+    /* ── Match Comments ── */
+    .match-comments-panel { border-top: 1px solid rgba(255,255,255,.06); background: rgba(0,0,0,.18); overflow: hidden; max-height: 0; transition: max-height .35s ease; border-radius: 0 0 12px 12px; margin: 0 -16px -16px -16px; }
+    .match-comments-panel.open { max-height: 600px; }
+    .comments-inner { padding: 12px 16px; }
+    .comment-item { display: flex; gap: 9px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.04); animation: fadeIn .2s ease; }
+    .comment-item:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+    .comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); flex-shrink: 0; }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+    .comment-username { font-size: 11px; font-weight: 700; color: var(--blue-hover); }
+    .comment-time    { font-size: 10px; color: var(--text-3); }
+    .comment-text    { font-size: 12px; color: var(--text-2); line-height: 1.5; word-break: break-word; }
+    .btn-del-comment { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 13px; padding: 0 2px; transition: color .15s; flex-shrink: 0; }
+    .btn-del-comment:hover { color: #f87171; }
+    .comment-form { display: flex; gap: 7px; margin-top: 10px; }
+    .comment-input { flex: 1; background: var(--bg-3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 12px; padding: 7px 10px; resize: none; outline: none; transition: border-color .2s; min-height: 34px; max-height: 90px; }
+    .comment-input:focus { border-color: var(--blue); }
+    .btn-comment-send { background: var(--blue); color: #fff; border: none; border-radius: 8px; padding: 7px 13px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
+    .btn-comment-send:hover { box-shadow: 0 4px 14px var(--blue-glow); transform: translateY(-1px); }
+    .btn-comment-toggle { background: none; border: none; cursor: pointer; color: var(--text-3); font-size: 11px; font-weight: 700; padding: 0; font-family: inherit; display: flex; align-items: center; gap: 4px; transition: color .2s; margin-left: auto; }
+    .btn-comment-toggle:hover { color: var(--blue-hover); }
+    .comment-count-badge { background: var(--blue-subtle); color: var(--blue-hover); border-radius: 100px; padding: 1px 6px; font-size: 10px; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+  <nav class="navbar">
+    <div class="navbar-brand"><span class="nav-icon">🏆</span> Sport Events</div>
+    <div class="admin-toggle-container" id="navToggleContainer">
+      <a href="dashboard.html" class="admin-switch">🏠 Accueil</a>
+      <a href="athlete-calendar.html" class="admin-switch active">📅 Calendrier</a>
+    </div>
+    <div class="navbar-user" style="display:flex;align-items:center;gap:12px">
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid var(--blue);display:none;">
+        <span class="nav-username" id="navUsername"></span>
+      </a>
+    </div>
+  </nav>
+  <main class="dashboard-layout">
+    <div class="section-title" style="margin-bottom:24px">📅 Mes Matchs à venir</div>
+    <div id="calendarList">
+      <div style="text-align:center;padding:40px;color:var(--text-2)">Chargement...</div>
+    </div>
+
+    <div class="section-title" style="margin-top:40px; margin-bottom:24px">📜 Matchs Joués</div>
+    <div id="playedList">
+      <div style="text-align:center;padding:40px;color:var(--text-2)">Chargement...</div>
+    </div>
+  </main>
+
+  <script>
+    Auth.requireAuth();
+    if (Auth.getRole() !== "joueur") {
+      alert("Accès réservé aux joueurs");
+      window.location.href = "dashboard.html";
+    }
+
+    document.getElementById("navUsername").textContent = Auth.getUsername();
+    API.getMe().then(u => { 
+        if(u.profile_image) {
+            const img = document.getElementById("navProfileImg");
+            img.src = getProfileImageUrl(u.profile_image); 
+            img.style.display = "block";
+        }
+    }).catch(() => {});
+
+    async function loadCalendar() {
+      try {
+        const req = await fetch(`${API_BASE}/api/admin/calendar`, {
+          headers: { "Authorization": `Bearer ${Auth.getToken()}` }
+        });
+        if (!req.ok) throw new Error("Erreur de chargement");
+        const matches = await req.json();
+
+        const upcoming = matches.filter(m => m.status === "a_venir" || m.status === "en_cours");
+        const played = matches.filter(m => m.status === "termine");
+
+        function renderMatches(list, containerId, emptyMsg) {
+          const container = document.getElementById(containerId);
+          container.innerHTML = "";
+          if (!list.length) {
+            container.innerHTML = `<div style="text-align:center;padding:60px;color:var(--text-2)">${emptyMsg}</div>`;
+            return;
+          }
+          list.forEach(m => {
+            const tA = m.team_a ? m.team_a.name : "TBD";
+            const tB = m.team_b ? m.team_b.name : "TBD";
+            const card = document.createElement("div");
+            card.className = "match-card";
+            card.innerHTML = `
+              <div class="match-header">
+                <span>📍 ${m.location || "À définir"}</span>
+                <span>📅 ${m.match_date ? formatDateFr(m.match_date) : "Date à définir"} ${m.match_time || ""}</span>
+              </div>
+              <div class="match-teams">${tA} <span style="color:var(--text-3);font-size:14px;margin:0 8px">vs</span> ${tB}</div>
+              ${m.status === "termine" ? `<div class="match-score">${m.score_a !== null ? m.score_a : "-"} : ${m.score_b !== null ? m.score_b : "-"}</div>` : ""}
+              <div class="match-footer" style="position:relative;">
+                <span class="status-badge status-${m.status}">${m.status === "a_venir" ? "À venir" : m.status === "en_cours" ? "En cours" : "Terminé"}</span>
+                ${m.winner ? `<span style="color:#56D364; margin-left:12px;">🏆 Vainqueur: ${m.winner.name}</span>` : ""}
+                <button class="btn-comment-toggle" id="cmtToggle_${m.id}" onclick="toggleComments(${m.id}, this)">
+                  💬 <span class="comment-count-badge" id="cmtCount_${m.id}">…</span>
+                </button>
+              </div>
+              <div class="match-comments-panel" id="cmtPanel_${m.id}">
+                <div class="comments-inner">
+                  <div id="cmtList_${m.id}" style="max-height:260px;overflow-y:auto;">
+                    <p style="color:var(--text-3);font-size:12px;text-align:center;padding:8px 0;">Chargement…</p>
+                  </div>
+                  <form class="comment-form" onsubmit="submitMatchComment(event, ${m.id})">
+                    <textarea id="cmtInput_${m.id}" class="comment-input" placeholder="Écrire un commentaire…" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitMatchComment(event,${m.id});}"></textarea>
+                    <button type="submit" class="btn-comment-send">Envoyer</button>
+                  </form>
+                </div>
+              </div>
+            `;
+            container.appendChild(card);
+
+            // Load comment count in background
+            API.getMatchComments(m.id).then(list => {
+              const badge = document.getElementById(`cmtCount_${m.id}`);
+              if (badge) badge.textContent = list.length;
+            }).catch(() => {});
+          });
+        }
+
+        renderMatches(upcoming, "calendarList", "Aucun match à venir");
+        renderMatches(played, "playedList", "Aucun match joué");
+      } catch(e) {
+        document.getElementById("calendarList").innerHTML = `<div style="color:var(--red);text-align:center;">${e.message}</div>`;
+        document.getElementById("playedList").innerHTML = "";
+      }
+    }
+
+    async function toggleComments(matchId, btn) {
+      const panel = document.getElementById(`cmtPanel_${matchId}`);
+      if (!panel) return;
+      const isOpen = panel.classList.toggle("open");
+      if (isOpen) await loadMatchComments(matchId);
+    }
+
+    async function loadMatchComments(matchId) {
+      const list = document.getElementById(`cmtList_${matchId}`);
+      if (!list) return;
+      try {
+        const comments = await API.getMatchComments(matchId);
+        const badge = document.getElementById(`cmtCount_${matchId}`);
+        if (badge) badge.textContent = comments.length;
+
+        if (!comments.length) {
+          list.innerHTML = '<p style="color:var(--text-3);font-size:12px;text-align:center;padding:8px 0;">Aucun commentaire. Soyez le premier !</p>';
+          return;
+        }
+        const myId = Auth.getUserId();
+        const role = Auth.getRole();
+        const isAdmin = role === "admin";
+        list.innerHTML = comments.map(c => `
+          <div class="comment-item" id="cmtItem_${c.id}">
+            <img class="comment-avatar" src="${getProfileImageUrl(c.user.profile_image)}" alt="">
+            <div class="comment-body">
+              <div class="comment-meta">
+                <span class="comment-username">${c.user.username}</span>
+                <span class="comment-time">${fmtCommentDate(c.created_at)}</span>
+              </div>
+              <div class="comment-text">${escHtml(c.content)}</div>
+            </div>
+            ${(c.user.id === myId || isAdmin) ? `<button class="btn-del-comment" title="Supprimer" onclick="deleteMatchComment(${c.id}, ${matchId})">🗑</button>` : ""}
+          </div>
+        `).join("");
+      } catch(e) { list.innerHTML = `<p style="color:var(--red);font-size:12px;">${e.message}</p>`; }
+    }
+
+    async function submitMatchComment(event, matchId) {
+      if (event && event.preventDefault) event.preventDefault();
+      const input = document.getElementById(`cmtInput_${matchId}`);
+      if (!input) return;
+      const content = input.value.trim();
+      if (!content) return;
+      try {
+        await API.addMatchComment(matchId, content);
+        input.value = "";
+        await loadMatchComments(matchId);
+      } catch(e) { alert(e.message); }
+    }
+
+    async function deleteMatchComment(commentId, matchId) {
+      if (!confirm("Supprimer ce commentaire ?")) return;
+      try {
+        await API.deleteMatchComment(commentId);
+        await loadMatchComments(matchId);
+      } catch(e) { alert(e.message); }
+    }
+
+    function fmtCommentDate(dt) {
+      if (!dt) return "";
+      return new Date(dt).toLocaleString("fr-FR", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" });
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    loadCalendar();
+  </script>
+</body>
+</html>

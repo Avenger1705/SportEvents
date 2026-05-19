@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérification OTP – Sport Events</title>
+  <meta name="description" content="Entrez le code de vérification envoyé à votre adresse email.">
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/api.js"></script>
+  <style>
+    .otp-email-label {
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-2);
+      margin-bottom: 4px;
+    }
+
+    .otp-email-addr {
+      text-align: center;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .otp-hint {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    .otp-box-group {
+      position: relative;
+    }
+
+    /* Invisible overlay input for mobile paste */
+    .otp-box::-webkit-outer-spin-button,
+    .otp-box::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .otp-box {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-scene"></div>
+
+  <div class="page-wrapper">
+    <div class="auth-card">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <span class="icon">📧</span>
+        <h1>Vérification</h1>
+        <p>Consultez votre boîte mail</p>
+      </div>
+
+      <p class="otp-email-label">Code envoyé à</p>
+      <p class="otp-email-addr" id="emailDisplayGroup">
+        <span id="emailDisplay">—</span>
+        <a href="#" id="editEmailBtn" style="font-size:12px;color:var(--blue);margin-left:8px;text-decoration:none;">✎ Modifier</a>
+      </p>
+
+      <div id="editEmailForm" style="display:none; margin-top:8px; margin-bottom:16px;">
+        <div style="display:flex;gap:8px;">
+          <input type="email" id="newEmailInput" placeholder="Nouvel email" style="flex:1;">
+          <button id="btnSaveEmail" class="btn btn-primary" style="padding:0 16px; width:auto;">Sauver</button>
+        </div>
+      </div>
+      <p class="otp-hint mt-8">
+        Un code à 6 chiffres vous a été envoyé.
+      </p>
+
+      <!-- Alert zone -->
+      <div id="alertZone" class="mt-16"></div>
+
+      <!-- OTP Boxes -->
+      <div class="otp-row otp-box-group" id="otpRow">
+        <input class="otp-box" type="number" maxlength="1" data-idx="0" inputmode="numeric"
+          autocomplete="one-time-code">
+        <input class="otp-box" type="number" maxlength="1" data-idx="1" inputmode="numeric">
+        <input class="otp-box" type="number" maxlength="1" data-idx="2" inputmode="numeric">
+        <input class="otp-box" type="number" maxlength="1" data-idx="3" inputmode="numeric">
+        <input class="otp-box" type="number" maxlength="1" data-idx="4" inputmode="numeric">
+        <input class="otp-box" type="number" maxlength="1" data-idx="5" inputmode="numeric">
+      </div>
+
+      <button id="btnVerify" class="btn btn-primary" disabled>
+        Vérifier le code
+      </button>
+
+      <!-- Resend + countdown -->
+      <div class="countdown-wrap mt-16">
+        <span id="timerText">Renvoyer dans <span class="timer" id="countdown">60</span>s</span>
+        <span class="resend-link" id="resendLink">Renvoyer le code</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Init ─────────────────────────────────────────────────────────────────
+    let email = sessionStorage.getItem("otp_email");
+    if (!email) { window.location.href = "register.html"; }
+
+    document.getElementById("emailDisplay").textContent = email;
+
+    // Email edit logic
+    const editEmailBtn  = document.getElementById("editEmailBtn");
+    const editEmailForm = document.getElementById("editEmailForm");
+    const newEmailInput = document.getElementById("newEmailInput");
+    const btnSaveEmail  = document.getElementById("btnSaveEmail");
+    const alertZone     = document.getElementById("alertZone");
+
+    editEmailBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      editEmailForm.style.display = "block";
+      newEmailInput.value = email;
+      newEmailInput.focus();
+    });
+
+    btnSaveEmail.addEventListener("click", async () => {
+      alertZone.innerHTML = "";
+      const newEmail = newEmailInput.value.trim();
+      if (!newEmail || newEmail === email) {
+        editEmailForm.style.display = "none";
+        return;
+      }
+      
+      setButtonLoading(btnSaveEmail, true, "...");
+      try {
+        const data = await API.changeUnverifiedEmail(email, newEmail);
+        email = newEmail;
+        sessionStorage.setItem("otp_email", email);
+        document.getElementById("emailDisplay").textContent = email;
+        editEmailForm.style.display = "none";
+        showAlert(data.message, "success");
+      } catch (err) {
+        showAlert(err.message);
+      } finally {
+        setButtonLoading(btnSaveEmail, false, "Sauver");
+      }
+    });
+
+    const boxes = [...document.querySelectorAll(".otp-box")];
+    const btnVerify = document.getElementById("btnVerify");
+
+    function showAlert(msg, type = "error") {
+      alertZone.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+    }
+
+    // ── OTP boxes logic ───────────────────────────────────────────────────────
+    function getValue() { return boxes.map(b => b.value).join(""); }
+
+    function checkComplete() {
+      const complete = boxes.every(b => /^\d$/.test(b.value));
+      btnVerify.disabled = !complete;
+      boxes.forEach(b => {
+        b.classList.toggle("filled", /^\d$/.test(b.value));
+      });
+    }
+
+    boxes.forEach((box, i) => {
+      box.addEventListener("input", (e) => {
+        // Keep only last digit
+        box.value = box.value.replace(/\D/g, "").slice(-1);
+        if (box.value && i < 5) boxes[i + 1].focus();
+        checkComplete();
+      });
+
+      box.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !box.value && i > 0) {
+          boxes[i - 1].value = "";
+          boxes[i - 1].focus();
+          checkComplete();
+        }
+        if (e.key === "ArrowLeft" && i > 0) { boxes[i - 1].focus(); e.preventDefault(); }
+        if (e.key === "ArrowRight" && i < 5) { boxes[i + 1].focus(); e.preventDefault(); }
+      });
+
+      // Paste support – paste anywhere, fill from left
+      box.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+        digits.split("").forEach((d, j) => {
+          if (boxes[j]) boxes[j].value = d;
+        });
+        const next = Math.min(digits.length, 5);
+        boxes[next].focus();
+        checkComplete();
+      });
+    });
+
+    // Auto-focus first box
+    boxes[0].focus();
+
+    // ── Verify ────────────────────────────────────────────────────────────────
+    btnVerify.addEventListener("click", async () => {
+      alertZone.innerHTML = "";
+      const otp = getValue();
+      if (otp.length !== 6) return;
+
+      setButtonLoading(btnVerify, true, "Vérifier le code");
+
+      try {
+        const data = await API.verifyOtp(email, otp);
+        sessionStorage.removeItem("otp_email");
+        showToast("✅ Compte vérifié ! Bienvenue.", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 800);
+      } catch (err) {
+        // Shake all boxes on error
+        boxes.forEach(b => { b.classList.add("error"); setTimeout(() => b.classList.remove("error"), 500); });
+        showAlert(err.message);
+        setButtonLoading(btnVerify, false, "Vérifier le code");
+      }
+    });
+
+    // ── Countdown + Resend ────────────────────────────────────────────────────
+    let seconds = 60;
+    const countdownEl = document.getElementById("countdown");
+    const timerText = document.getElementById("timerText");
+    const resendLink = document.getElementById("resendLink");
+
+    const timer = setInterval(() => {
+      seconds--;
+      countdownEl.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(timer);
+        timerText.style.display = "none";
+        resendLink.classList.add("visible");
+      }
+    }, 1000);
+
+    resendLink.addEventListener("click", async () => {
+      alertZone.innerHTML = "";
+      resendLink.classList.remove("visible");
+      resendLink.textContent = "Envoi en cours…";
+
+      try {
+        await API.resendOtp(email);
+        showAlert("Nouveau code envoyé ! Vérifiez votre email.", "success");
+        showToast("📧 Nouveau code envoyé !", "success");
+        // Reset boxes
+        boxes.forEach(b => { b.value = ""; b.classList.remove("filled", "error"); });
+        boxes[0].focus();
+        btnVerify.disabled = true;
+        // Restart timer
+        seconds = 60;
+        countdownEl.textContent = 60;
+        timerText.style.display = "";
+        resendLink.textContent = "Renvoyer le code";
+      } catch (err) {
+        showAlert(err.message);
+        resendLink.classList.add("visible");
+        resendLink.textContent = "Renvoyer le code";
+      }
+    });
+  </script>
+</body>
+
+</html>

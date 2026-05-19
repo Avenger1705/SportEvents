@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tableau de bord – Sport Events</title>
+  <meta name="description" content="Découvrez et gérez vos événements sportifs.">
+  <link rel="stylesheet" href="../css/style.css">
+  <!-- Leaflet map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="../js/api.js"></script>
+  <style>
+    /* ── Extra dashboard styles ── */
+    .modal-box.wide { max-width: 720px; }
+
+    /* map picker */
+    #mapPicker { height: 260px; border-radius: 12px; overflow: hidden; margin-top: 8px; border: 1px solid var(--border); }
+
+    /* photo upload zone */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      color: var(--text-2);
+      font-size: 14px;
+    }
+    .upload-zone:hover { border-color: var(--blue); color: var(--text); }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-zone .upload-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+
+    /* cover preview */
+    #coverPreview {
+      width: 100%; max-height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* gallery preview row */
+    .gallery-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .gallery-preview img {
+      width: 72px; height: 72px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    /* event card enhancements */
+    .event-cover-img {
+      width: 100%; height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      display: block;
+    }
+    .event-cover-placeholder {
+      width: 100%; height: 120px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #1a2237, #0d1b40);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+    }
+    .event-card-author {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 8px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .event-card-author span { color: var(--text-2); font-weight: 600; }
+    .event-card-actions {
+      display: flex; gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .btn-action {
+      flex: 1;
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .btn-edit-ev {
+      background: rgba(31,107,255,0.12);
+      color: var(--blue-hover);
+      border: 1px solid rgba(31,107,255,0.3);
+    }
+    .btn-edit-ev:hover { background: rgba(31,107,255,0.22); }
+    .btn-del-ev {
+      background: rgba(239,68,68,0.1);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+    .btn-del-ev:hover { background: rgba(239,68,68,0.2); }
+
+    /* modal tabs */
+    .modal-tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+    .modal-tab {
+      flex: 1; padding: 9px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-2);
+      font-weight: 600; font-size: 13px; font-family: inherit;
+      cursor: pointer; transition: all .2s;
+    }
+    .modal-tab.active {
+      background: var(--blue-subtle);
+      border-color: var(--blue);
+      color: var(--blue-hover);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* map location info */
+    .map-coords {
+      font-size: 12px; color: var(--text-3);
+      margin-top: 6px; font-style: italic;
+    }
+
+    /* scrollable modal */
+    .modal-box { max-height: 90vh; overflow-y: auto; }
+    .modal-box::-webkit-scrollbar { width: 4px; }
+    .modal-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* modal close button */
+    .modal-close {
+      position: absolute; top: 16px; right: 16px;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--glass-hover);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+    }
+    .modal-close:hover { background: var(--red); color: white; border-color: var(--red); }
+
+    /* ════════ Search bar ════════ */
+    .search-wrapper {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 14px 20px 14px 50px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--backdrop);
+      border: 1px solid var(--glass-border);
+      border-radius: 100px;
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: all .25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .search-input::placeholder { color: var(--text-3); opacity: 0.7; }
+    .search-input:focus {
+      border-color: var(--blue);
+      background: var(--bg-2);
+      box-shadow: 0 0 0 4px var(--blue-glow);
+    }
+    .search-icon {
+      position: absolute;
+      left: 18px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      pointer-events: none;
+      opacity: 0.5;
+    }
+    .search-clear {
+      position: absolute;
+      right: 16px; top: 50%;
+      transform: translateY(-50%);
+      background: var(--glass-hover);
+      border: none;
+      border-radius: 50%;
+      width: 26px; height: 26px;
+      color: var(--text-2);
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+      align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .search-clear.visible { display: flex; }
+    .search-clear:hover { background: var(--red); color: white; }
+
+    /* ════════ Filter section header ════════ */
+    .filter-section {
+      margin-bottom: 28px;
+    }
+    .filter-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .filter-label {
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-3);
+    }
+    .filter-count-badge {
+      font-size: 11px; font-weight: 700;
+      background: var(--blue-subtle);
+      color: var(--blue-hover);
+      border: 1px solid rgba(31,107,255,0.25);
+      border-radius: 100px;
+      padding: 2px 10px;
+    }
+    /* Override filter-bar from global CSS for our new look */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 4px 2px 12px;
+      background: transparent;
+      border-radius: 0;
+      width: 100%;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .filter-bar::-webkit-scrollbar { height: 4px; }
+    .filter-bar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .filter-chip {
+      flex-shrink: 0;
+      padding: 8px 18px;
+      border-radius: 100px;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all .2s;
+      white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .filter-chip:hover {
+      color: var(--text);
+      border-color: rgba(31,107,255,0.4);
+      background: var(--glass-hover);
+      transform: translateY(-1px);
+    }
+    .filter-chip.active {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+      box-shadow: 0 4px 16px var(--blue-glow);
+      transform: translateY(-1px);
+    }
+    .chip-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.2);
+      border-radius: 100px;
+      font-size: 10px; font-weight: 700;
+      min-width: 18px; height: 18px;
+      padding: 0 4px;
+    }
+    .filter-chip:not(.active) .chip-count {
+      background: var(--glass);
+      color: var(--text-3);
+    }
+    /* ════════════════════════════════ */
+
+    /* Loading overlay on grid */
+    .loading-indicator {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-2);
+    }
+    .loading-spinner-lg {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(31,107,255,0.2);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    /* search highlight */
+    .highlight {
+      background: rgba(31,107,255,0.25);
+      color: var(--blue-hover);
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-scene"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <span class="nav-icon">🏆</span>
+      Sport Events
+    </div>
+    <div class="admin-toggle-container" id="navToggleContainer" style="display:none;">
+      <!-- JS will populate this based on role -->
+    </div>
+    <div class="navbar-user" style="display:flex; align-items:center; gap:12px;">
+      <a href="tournaments.html" class="btn btn-ghost btn-sm" style="text-decoration:none;">🏆 Tournois</a>
+      <a href="profile-settings.html" style="display:flex; align-items:center; gap:8px; text-decoration:none;">
+        <img id="navProfileImg" src="" alt="Photo de profil" style="width:36px; height:36px; border-radius:50%; object-fit:cover; display:none; border:2px solid var(--blue);">
+        <span class="nav-username" id="navUsername" style="color:var(--text);"></span>
+      </a>
+      <button class="btn btn-ghost btn-sm" id="btnLogout">Déconnexion</button>
+    </div>
+  </nav>
+
+  <!-- Dashboard content -->
+  <main class="dashboard-layout">
+
+    <!-- Hero banner -->
+    <div class="dash-hero">
+      <div class="dash-hero-text">
+        <h2 id="heroGreeting">Bienvenue 👋</h2>
+        <p>Explorez les événements sportifs à venir et rejoignez la compétition.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+          <span class="badge badge-blue" id="roleBadge">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-number" id="statEvents">—</div>
+        <div class="stat-label">Événements disponibles</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="statSports">—</div>
+        <div class="stat-label">Sports couverts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="statOrganizers">—</div>
+        <div class="stat-label">Organisateurs actifs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="statTournaments">—</div>
+        <div class="stat-label">Tournois actifs</div>
+      </div>
+    </div>
+
+    <!-- Actions (organizer only) -->
+    <div id="organizerActions" style="display:none;margin-bottom:24px;">
+      <button class="btn btn-primary" id="btnCreateEvent" style="width:auto;padding:12px 28px;">
+        ＋ Créer un événement
+      </button>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-wrapper">
+      <span class="search-icon">🔍</span>
+      <input id="searchInput" class="search-input"
+             type="search"
+             placeholder="Rechercher par titre, sport, lieu, organisateur…"
+             autocomplete="off">
+      <button class="search-clear" id="searchClear" title="Effacer">✕</button>
+    </div>
+
+    <!-- Filter section -->
+    <div class="filter-section">
+      <div class="filter-header">
+        <span class="filter-label">🏷️ Filtrer par sport</span>
+        <span class="filter-count-badge" id="filterCountBadge">Tous</span>
+      </div>
+      <div class="filter-bar" id="filterBar">
+        <div class="filter-chip active" data-sport="all">Tous <span class="chip-count" id="chipCountAll">0</span></div>
+      </div>
+    </div>
+
+    <!-- Events section -->
+    <div class="section-title">
+      Événements à venir <span id="eventsCountLabel"></span>
+    </div>
+    <div class="events-grid" id="eventsGrid">
+      <div class="loading-indicator">
+        <div class="loading-spinner-lg"></div>
+        <p>Chargement des événements…</p>
+      </div>
+    </div>
+
+    <!-- ── Tournaments section ── -->
+    <div class="section-title" style="margin-top:40px;">
+      🏆 Tournois <span id="tournamentsCountLabel"></span>
+      <a href="tournaments.html" style="font-size:13px;font-weight:600;color:var(--blue-hover);text-decoration:none;margin-left:12px;opacity:0.8;">Voir tout →</a>
+    </div>
+    <div class="events-grid" id="tournamentsGrid">
+      <div class="loading-indicator">
+        <div class="loading-spinner-lg"></div>
+        <p>Chargement des tournois…</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       Create / Edit Event Modal
+  ════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="createModal" role="dialog" aria-modal="true">
+    <div class="modal-box wide" style="position:relative;">
+      <button class="modal-close" id="modalClose" aria-label="Fermer">✕</button>
+      <div class="modal-title" id="modalTitle">➕ Nouvel événement</div>
+      <div id="modalAlert"></div>
+
+      <!-- Tab navigation -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" data-tab="info">📋 Informations</button>
+        <button class="modal-tab" data-tab="location">📍 Lieu & Carte</button>
+        <button class="modal-tab" data-tab="photos">📷 Photos</button>
+      </div>
+
+      <!-- Tab 1: Basic info -->
+      <div class="tab-panel active" id="tabInfo">
+        <div class="form-group">
+          <label for="evTitle">Titre *</label>
+          <input id="evTitle" type="text" placeholder="Ex: Tournoi de football">
+        </div>
+        <div class="form-group">
+          <label for="evSport">Sport</label>
+          <select id="evSport">
+            <option value="">— Choisir —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="evDate">Date de l'événement</label>
+          <input id="evDate" type="datetime-local">
+        </div>
+        <div class="form-group">
+          <label for="evDuration">Durée (ex: 2h)</label>
+          <input id="evDuration" type="text" placeholder="1h 30m">
+        </div>
+        <div class="form-group">
+          <label for="evDesc">Description</label>
+          <textarea id="evDesc" rows="3" placeholder="Décrivez l'événement…"
+            style="width:100%;padding:12px 16px;background:var(--bg-3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:14px;font-family:inherit;resize:vertical;outline:none;"></textarea>
+        </div>
+      </div>
+
+      <!-- Tab 2: Location & Map -->
+      <div class="tab-panel" id="tabLocation">
+        <div class="form-group">
+          <label for="evLocation">Adresse / Lieu</label>
+          <input id="evLocation" type="text" placeholder="Ex: Stade municipal, Alger">
+        </div>
+        <label style="font-size:13px;font-weight:500;color:var(--text-2);display:block;margin-bottom:6px;">
+          🗺️ Cliquez sur la carte pour définir l'emplacement exact
+        </label>
+        <div id="mapPicker"></div>
+        <div class="map-coords" id="mapCoords">Aucun point sélectionné — cliquez sur la carte</div>
+        <input type="hidden" id="evLat">
+        <input type="hidden" id="evLng">
+      </div>
+
+      <!-- Tab 3: Photos -->
+      <div class="tab-panel" id="tabPhotos">
+        <div class="form-group">
+          <label>Photo de couverture *</label>
+          <div class="upload-zone" id="coverZone" onclick="document.getElementById('evCoverFile').click()">
+            <span class="upload-icon">🖼️</span>
+            Cliquez pour choisir une image
+            <input type="file" id="evCoverFile" accept="image/*">
+          </div>
+          <img id="coverPreview" alt="Aperçu de la couverture">
+        </div>
+        <div class="form-group">
+          <label>Photos supplémentaires (galerie)</label>
+          <div class="upload-zone" id="galleryZone" onclick="document.getElementById('evGalleryFiles').click()">
+            <span class="upload-icon">📸</span>
+            Cliquez pour ajouter des photos (plusieurs possibles)
+            <input type="file" id="evGalleryFiles" accept="image/*" multiple>
+          </div>
+          <div class="gallery-preview" id="galleryPreview"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary mt-8" id="btnSubmitEvent" style="margin-top:20px;">Créer l'événement</button>
+    </div>
+  </div>
+
+  <script>
+    Auth.requireAuth();
+
+    // ── User info ─────────────────────────────────────────────────────────────
+    const username  = Auth.getUsername() || "Utilisateur";
+    const role      = Auth.getRole() || "";
+    const myUserId  = Auth.getUserId();
+
+    document.getElementById("navUsername").textContent  = username;
+    document.getElementById("heroGreeting").textContent = `Bienvenue, ${username} 👋`;
+
+    API.getMe().then(user => {
+      const img = document.getElementById("navProfileImg");
+      img.src = getProfileImageUrl(user.profile_image);
+      img.style.display = "block";
+    }).catch(console.error);
+
+    const roleLabels = { admin:"🛡️ Admin", joueur:"⚽ Joueur", visitor:"👁️ Visiteur" };
+    const roleBadge  = document.getElementById("roleBadge");
+    roleBadge.textContent = roleLabels[role] || role;
+    if      (role === "admin")  roleBadge.className = "badge badge-orange";
+    else if (role === "joueur") roleBadge.className = "badge badge-green";
+    else                        roleBadge.className = "badge badge-blue";
+
+    // Show role-specific toggles in navbar
+    if (role === "admin") {
+      document.getElementById("organizerActions").style.display = "block";
+      const toggle = document.getElementById("navToggleContainer");
+      if (toggle) {
+        toggle.innerHTML = `
+           <a href="dashboard.html" class="admin-switch active">🏠 Accueil</a>
+           <a href="admin-dashboard.html" class="admin-switch">⚙️ Mode Admin</a>
+        `;
+        toggle.style.display = "flex";
+      }
+    } else if (role === "joueur") {
+      const toggle = document.getElementById("navToggleContainer");
+      if (toggle) {
+        toggle.innerHTML = `
+           <a href="dashboard.html" class="admin-switch active">🏠 Accueil</a>
+           <a href="athlete-calendar.html" class="admin-switch">📅 Calendrier</a>
+        `;
+        toggle.style.display = "flex";
+      }
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────────
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      Auth.logout();
+    });
+
+    // ── Search state ──────────────────────────────────────────────────────────
+    let activeSearch = "";
+    const searchInput = document.getElementById("searchInput");
+    const searchClear = document.getElementById("searchClear");
+
+    searchInput.addEventListener("input", e => {
+      activeSearch = e.target.value.toLowerCase().trim();
+      searchClear.classList.toggle("visible", activeSearch.length > 0);
+      renderEvents();
+      renderTournaments();
+    });
+
+    searchClear.addEventListener("click", () => {
+      searchInput.value = "";
+      activeSearch = "";
+      searchClear.classList.remove("visible");
+      renderEvents();
+      renderTournaments();
+    });
+
+    // ── Populate sport filter & modal select ──────────────────────────────────
+    const filterBar = document.getElementById("filterBar");
+    const evSportEl = document.getElementById("evSport");
+
+    function initSportSelect() {
+      if (!evSportEl) return;
+      evSportEl.innerHTML = '<option value="">— Choisir —</option>';
+      SPORTS_LIST.sort().forEach(sport => {
+        const opt = document.createElement("option");
+        opt.value = sport;
+        opt.textContent = `${sportEmoji(sport)} ${sport}`;
+        evSportEl.appendChild(opt);
+      });
+    }
+
+    let activeFilter = "all";
+    filterBar.addEventListener("click", e => {
+      const chip = e.target.closest(".filter-chip");
+      if (!chip) return;
+      filterBar.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      activeFilter = chip.dataset.sport;
+      document.getElementById("filterCountBadge").textContent = 
+        activeFilter === "all" ? "Tous" : activeFilter;
+      renderEvents();
+    });
+
+    // ── Events & Tournaments state ───────────────────────────────────────────
+    let ALL_EVENTS = [];
+    let ALL_TOURNAMENTS = [];
+
+    function formatDate(dt) {
+      if (!dt) return "—";
+      return new Date(dt).toLocaleDateString("fr-FR", {
+        day: "numeric", month: "long", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function sportEmoji(sport) {
+      const map = {
+        "Football":"⚽","Basketball":"🏀","Basketball 3x3":"🏀","Tennis":"🎾",
+        "Volleyball":"🏐","Beach Volleyball":"🏐","Natation":"🏊","Athlétisme":"🏃",
+        "Judo":"🥋","Boxe":"🥊","Cyclisme sur route":"🚴","BMX racing":"🚵",
+        "Escalade":"🧗","Golf":"⛳","Rugby":"🏉","Handball":"🤾",
+        "Hockey":"🏑","Ski":"⛷️","Surf":"🏄","Water-polo":"🤽",
+      };
+      return map[sport] || "🏆";
+    }
+
+    const eventsGrid       = document.getElementById("eventsGrid");
+    const eventsCountLabel = document.getElementById("eventsCountLabel");
+    const tournamentsGrid  = document.getElementById("tournamentsGrid");
+    const tournamentsCountLabel = document.getElementById("tournamentsCountLabel");
+
+    function renderEvents() {
+      let filtered = ALL_EVENTS;
+
+      // Apply Sport filter
+      if (activeFilter !== "all") {
+        filtered = filtered.filter(e => e.sport === activeFilter);
+      }
+
+      // Apply Search filter
+      if (activeSearch) {
+        filtered = filtered.filter(e => {
+          const searchStr = [
+            e.title,
+            e.sport,
+            e.location,
+            e.description,
+            e.organizer_name
+          ].join(" ").toLowerCase();
+          return searchStr.includes(activeSearch);
+        });
+      }
+
+      eventsCountLabel.textContent = `(${filtered.length})`;
+
+      if (filtered.length === 0) {
+        eventsGrid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <span class="empty-icon">🔍</span>
+            <h3>Aucun événement trouvé</h3>
+            <p>Essayez un autre filtre ou revenez plus tard.</p>
+          </div>`;
+        return;
+      }
+
+      eventsGrid.innerHTML = "";
+      filtered.forEach(ev => {
+        const isOwner = (ev.organizer_id === myUserId && role === "admin");
+
+        const card = document.createElement("div");
+        card.className = "event-card";
+        card.dataset.id = ev.id;
+
+        card.innerHTML = `
+          ${ev.cover_photo
+            ? `<img class="event-cover-img" src="${API_BASE}${ev.cover_photo}" alt="${ev.title}" loading="lazy" onerror="this.style.display='none'">`
+            : `<div class="event-cover-placeholder">${sportEmoji(ev.sport)}</div>`
+          }
+          <div class="event-card-sport">${ev.sport || "Sport"}</div>
+          <div class="event-card-title">${ev.title}</div>
+          <div class="event-card-meta">
+            ${ev.location   ? `<span>📍 ${ev.location}</span>` : ""}
+            ${ev.event_date ? `<span>📅 ${formatDate(ev.event_date)}</span>` : ""}
+            ${ev.duration   ? `<span style="color:var(--blue-hover)">⏱️ Durée: ${ev.duration}</span>` : ""}
+          </div>
+          <div class="event-card-author">Ajouté par: <span>${ev.organizer_name || "Inconnu"}</span></div>
+          <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+             <span style="font-size:12px; color:var(--blue-hover); font-weight:700;">💬 Voir les commentaires →</span>
+          </div>
+          ${isOwner ? `
+            <div class="event-card-actions" onclick="event.stopPropagation()">
+              <button class="btn-action btn-edit-ev" data-id="${ev.id}">✏️ Modifier</button>
+              <button class="btn-action btn-del-ev" data-id="${ev.id}">🗑️ Supprimer</button>
+            </div>` : ""}
+        `;
+
+        // Navigate to detail page on card click (not on action buttons)
+        card.addEventListener("click", e => {
+          if (e.target.closest(".event-card-actions")) return;
+          window.location.href = `event-detail.html?id=${ev.id}#commentsPlaceholder`;
+        });
+
+        // Edit
+        const editBtn = card.querySelector(".btn-edit-ev");
+        if (editBtn) editBtn.addEventListener("click", () => openEditModal(ev));
+
+        // Delete
+        const delBtn = card.querySelector(".btn-del-ev");
+        if (delBtn) delBtn.addEventListener("click", () => confirmDelete(ev));
+
+        eventsGrid.appendChild(card);
+      });
+    }
+
+    async function loadEvents() {
+      eventsGrid.innerHTML = `
+        <div class="loading-indicator">
+          <div class="loading-spinner-lg"></div>
+          <p>Chargement des événements…</p>
+        </div>`;
+      try {
+        ALL_EVENTS = await API.getEvents();
+        updateStats();
+        updateFilterChips();
+        renderEvents();
+        renderTournaments();
+      } catch (err) {
+        eventsGrid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <span class="empty-icon">⚠️</span>
+            <h3>Erreur de chargement</h3>
+            <p>${err.message}</p>
+          </div>`;
+      }
+    }
+
+    function updateStats() {
+      const uniqueSports = new Set([
+        ...ALL_EVENTS.map(e => e.sport),
+        ...ALL_TOURNAMENTS.map(t => t.sport)
+      ].filter(Boolean));
+      const uniqueOrgs = new Set(ALL_EVENTS.map(e => e.organizer_id).filter(Boolean));
+      
+      document.getElementById("statEvents").textContent     = ALL_EVENTS.length;
+      document.getElementById("statTournaments").textContent = ALL_TOURNAMENTS.length;
+      document.getElementById("statSports").textContent     = uniqueSports.size;
+      document.getElementById("statOrganizers").textContent = uniqueOrgs.size;
+    }
+
+    function updateFilterChips() {
+      const allChip = filterBar.querySelector('[data-sport="all"]');
+      filterBar.innerHTML = "";
+      filterBar.appendChild(allChip);
+
+      const counts = {};
+      ALL_EVENTS.forEach(ev => {
+        if (ev.sport) counts[ev.sport] = (counts[ev.sport] || 0) + 1;
+      });
+      ALL_TOURNAMENTS.forEach(t => {
+        if (t.sport) counts[t.sport] = (counts[t.sport] || 0) + 1;
+      });
+
+      const totalItems = ALL_EVENTS.length + ALL_TOURNAMENTS.length;
+      document.getElementById("chipCountAll").textContent = totalItems;
+
+      SPORTS_LIST.forEach(sport => {
+        const count = counts[sport] || 0;
+        if (count === 0 && activeFilter !== sport) return;
+
+        const chip = document.createElement("div");
+        chip.className = "filter-chip" + (activeFilter === sport ? " active" : "");
+        chip.dataset.sport = sport;
+        chip.innerHTML = `${sport} <span class="chip-count">${count}</span>`;
+        filterBar.appendChild(chip);
+      });
+    }
+
+    filterBar.addEventListener("click", e => {
+      const chip = e.target.closest(".filter-chip");
+      if (!chip) return;
+      filterBar.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      activeFilter = chip.dataset.sport;
+      document.getElementById("filterCountBadge").textContent = 
+        activeFilter === "all" ? "Tous" : activeFilter;
+      renderEvents();
+      renderTournaments();
+    });
+
+    // ── Delete event ──────────────────────────────────────────────────────────
+    async function confirmDelete(ev) {
+      if (!confirm(`Supprimer l'événement "${ev.title}" ? Cette action est irréversible.`)) return;
+      try {
+        await API.deleteEvent(ev.id);
+        showToast("🗑️ Événement supprimé", "success");
+        loadEvents();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    // ── Leaflet map ───────────────────────────────────────────────────────────
+    let leafletMap = null;
+    let leafletMarker = null;
+
+    function initMap(lat = 36.737, lng = 3.086) {
+      if (leafletMap) return;
+      leafletMap = L.map("mapPicker").setView([lat, lng], 6);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+      }).addTo(leafletMap);
+
+      leafletMap.on("click", e => {
+        const { lat, lng } = e.latlng;
+        setMapPin(lat, lng);
+        // Reverse geocode with Nominatim
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.display_name) {
+              const loc = data.display_name.split(",").slice(0,4).join(", ");
+              const locInput = document.getElementById("evLocation");
+              if (!locInput.value.trim()) locInput.value = loc;
+            }
+          })
+          .catch(() => {});
+      });
+    }
+
+    function setMapPin(lat, lng) {
+      document.getElementById("evLat").value = lat;
+      document.getElementById("evLng").value = lng;
+      document.getElementById("mapCoords").textContent = `📌 Lat: ${lat.toFixed(5)}, Lng: ${lng.toFixed(5)}`;
+
+      if (leafletMarker) {
+        leafletMarker.setLatLng([lat, lng]);
+      } else {
+        leafletMarker = L.marker([lat, lng]).addTo(leafletMap);
+      }
+      leafletMap.panTo([lat, lng]);
+    }
+
+    // ── Modal tabs ────────────────────────────────────────────────────────────
+    document.querySelectorAll(".modal-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".modal-tab").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab" + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.add("active");
+
+        // Init map when location tab is shown
+        if (btn.dataset.tab === "location") {
+          setTimeout(() => {
+            initMap();
+            leafletMap.invalidateSize();
+          }, 50);
+        }
+      });
+    });
+
+    // ── Photo previews ────────────────────────────────────────────────────────
+    document.getElementById("evCoverFile").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const prev = document.getElementById("coverPreview");
+      prev.src = URL.createObjectURL(file);
+      prev.style.display = "block";
+      document.getElementById("coverZone").style.borderColor = "var(--blue)";
+    });
+
+    document.getElementById("evGalleryFiles").addEventListener("change", e => {
+      const files = Array.from(e.target.files);
+      const container = document.getElementById("galleryPreview");
+      container.innerHTML = "";
+      files.forEach(f => {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(f);
+        container.appendChild(img);
+      });
+    });
+
+    // ── Modal open/close ──────────────────────────────────────────────────────
+    const modal      = document.getElementById("createModal");
+    const modalAlert = document.getElementById("modalAlert");
+    const modalTitle = document.getElementById("modalTitle");
+    let editingEventId = null;
+
+    function openCreateModal() {
+      editingEventId = null;
+      modalTitle.textContent = "➕ Nouvel événement";
+      document.getElementById("btnSubmitEvent").textContent = "Créer l'événement";
+
+      // Reset all fields
+      ["evTitle","evLocation","evDate","evLat","evLng","evDuration"].forEach(id => { 
+        const el = document.getElementById(id);
+        if (el) el.value = ""; 
+      });
+      document.getElementById("evDesc").value = "";
+      document.getElementById("evSport").value = "";
+      document.getElementById("coverPreview").style.display = "none";
+      document.getElementById("galleryPreview").innerHTML = "";
+      document.getElementById("mapCoords").textContent = "Aucun point sélectionné — cliquez sur la carte";
+      modalAlert.innerHTML = "";
+
+      // Reset to first tab
+      document.querySelectorAll(".modal-tab")[0].click();
+
+      modal.classList.add("open");
+    }
+
+    function openEditModal(ev) {
+      editingEventId = ev.id;
+      modalTitle.textContent = "✏️ Modifier l'événement";
+      document.getElementById("btnSubmitEvent").textContent = "Enregistrer les modifications";
+
+      // Pre-fill fields
+      document.getElementById("evTitle").value    = ev.title || "";
+      document.getElementById("evDesc").value     = ev.description || "";
+      document.getElementById("evSport").value    = ev.sport || "";
+      document.getElementById("evLocation").value = ev.location || "";
+      document.getElementById("evLat").value      = ev.latitude || "";
+      document.getElementById("evLng").value      = ev.longitude || "";
+      document.getElementById("evDuration").value = ev.duration || "";
+      if (ev.event_date) {
+        // Convert ISO to datetime-local format
+        document.getElementById("evDate").value = ev.event_date.slice(0, 16);
+      }
+
+      if (ev.cover_photo) {
+        const prev = document.getElementById("coverPreview");
+        prev.src = `${API_BASE}${ev.cover_photo}`;
+        prev.style.display = "block";
+      }
+
+      modalAlert.innerHTML = "";
+      document.querySelectorAll(".modal-tab")[0].click();
+      modal.classList.add("open");
+    }
+
+    document.getElementById("btnCreateEvent")?.addEventListener("click", openCreateModal);
+
+    document.getElementById("modalClose").addEventListener("click", () => { modal.classList.remove("open"); });
+    modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("open"); });
+
+    // ── Submit event ──────────────────────────────────────────────────────────
+    document.getElementById("btnSubmitEvent").addEventListener("click", async () => {
+      const title      = document.getElementById("evTitle").value.trim();
+      const sport      = document.getElementById("evSport").value;
+      const location   = document.getElementById("evLocation").value.trim();
+      const date       = document.getElementById("evDate").value;
+      const desc       = document.getElementById("evDesc").value.trim();
+      const lat        = document.getElementById("evLat").value;
+      const lng        = document.getElementById("evLng").value;
+      const coverFile  = document.getElementById("evCoverFile").files[0];
+      const galleryFiles = document.getElementById("evGalleryFiles").files;
+
+      if (!title) {
+        modalAlert.innerHTML = `<div class="alert alert-error">⚠️ Le titre est requis.</div>`;
+        document.querySelectorAll(".modal-tab")[0].click();
+        return;
+      }
+      if (!editingEventId && !coverFile) {
+        modalAlert.innerHTML = `<div class="alert alert-error">📷 Une photo de couverture est requise.</div>`;
+        document.querySelectorAll(".modal-tab")[2].click();
+        return;
+      }
+
+      const btn = document.getElementById("btnSubmitEvent");
+      const originalText = btn.textContent;
+      setButtonLoading(btn, true, originalText);
+      modalAlert.innerHTML = "";
+
+      try {
+        const fd = new FormData();
+        fd.append("title",       title);
+        fd.append("description", desc);
+        fd.append("sport",       sport);
+        fd.append("location",    location);
+        if (lat) fd.append("latitude",  lat);
+        if (lng) fd.append("longitude", lng);
+        if (date) fd.append("event_date", date);
+        fd.append("duration",     document.getElementById("evDuration").value);
+        if (coverFile) fd.append("cover_photo", coverFile);
+
+        // Gallery files
+        for (const f of galleryFiles) {
+          fd.append("gallery_photos", f);
+        }
+
+        let result;
+        if (editingEventId) {
+          result = await API.updateEvent(editingEventId, fd);
+          showToast("✅ Événement modifié avec succès !", "success");
+        } else {
+          result = await API.createEvent(fd);
+          showToast("✅ Événement créé avec succès !", "success");
+        }
+
+        modal.classList.remove("open");
+        loadEvents();
+      } catch (err) {
+        modalAlert.innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+      } finally {
+        setButtonLoading(btn, false, originalText);
+      }
+    });
+
+    // ── Tournaments ───────────────────────────────────────────────────────────
+    function renderTournaments() {
+      let filtered = ALL_TOURNAMENTS;
+
+      if (activeFilter !== "all") {
+        filtered = filtered.filter(t => t.sport === activeFilter);
+      }
+
+      if (activeSearch) {
+        filtered = filtered.filter(t => {
+          const searchStr = [
+            t.name,
+            t.sport,
+            t.location,
+            t.description
+          ].join(" ").toLowerCase();
+          return searchStr.includes(activeSearch);
+        });
+      }
+
+      tournamentsCountLabel.textContent = `(${filtered.length})`;
+
+      if (filtered.length === 0) {
+        tournamentsGrid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <span class="empty-icon">🏆</span>
+            <h3>Aucun tournoi trouvé</h3>
+            <p>Essayez un autre filtre ou revenez plus tard.</p>
+          </div>`;
+        return;
+      }
+
+      tournamentsGrid.innerHTML = "";
+      filtered.forEach(t => {
+        const card = document.createElement("div");
+        card.className = "event-card";
+        card.style.cursor = "pointer";
+
+        const statusLabel = t.status === "en_cours" ? "🟡 En cours"
+          : t.status === "terminé" ? "✅ Terminé"
+          : "🔵 À venir";
+
+        card.innerHTML = `
+          <div class="event-cover-placeholder">${sportEmoji(t.sport)}</div>
+          <div class="event-card-sport">${t.sport || "Sport"}</div>
+          <div class="event-card-title">${t.name}</div>
+          <div class="event-card-meta">
+            ${t.location ? `<span>📍 ${t.location}</span>` : ""}
+            ${t.start_date ? `<span>📅 ${formatDate(t.start_date)}</span>` : ""}
+            <span>👥 ${t.teams.length} équipe${t.teams.length !== 1 ? "s" : ""}</span>
+            <span>🎯 ${t.matches.length} match${t.matches.length !== 1 ? "s" : ""}</span>
+            <span style="color:var(--blue-hover);font-weight:700;">${statusLabel}</span>
+          </div>
+          ${t.description ? `<div style="font-size:13px;color:var(--text-2);margin-top:8px;line-height:1.5;">${t.description}</div>` : ""}
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px;font-weight:700;color:var(--blue-hover);">🏆 Voir les matchs & commentaires →</span>
+          </div>
+        `;
+        card.addEventListener("click", () => { window.location.href = "tournaments.html"; });
+        tournamentsGrid.appendChild(card);
+      });
+    }
+
+    async function loadTournaments() {
+      tournamentsGrid.innerHTML = `<div class="loading-indicator"><div class="loading-spinner-lg"></div><p>Chargement des tournois…</p></div>`;
+      try {
+        ALL_TOURNAMENTS = await API.getTournaments();
+        updateStats();
+        updateFilterChips();
+        renderTournaments();
+      } catch (err) {
+        tournamentsGrid.innerHTML = `
+          <div class="empty-state" style="grid-column:1/-1;">
+            <span class="empty-icon">⚠️</span>
+            <h3>Erreur de chargement</h3>
+            <p>${err.message}</p>
+          </div>`;
+      }
+    }
+
+    // ── Initial load ──────────────────────────────────────────────────────────
+    initSportSelect();
+    loadEvents();
+    loadTournaments();
+  </script>
+</body>
+</html>
