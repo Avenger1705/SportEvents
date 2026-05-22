@@ -5,6 +5,7 @@
 **A full-stack web platform for managing and discovering sporting events.**  
 Built with **FastAPI** · **SQLAlchemy** · **MySQL** · **Vanilla HTML/CSS/JS**
 
+
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?logo=mysql&logoColor=white)
